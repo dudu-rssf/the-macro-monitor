@@ -1,9 +1,21 @@
 export const dynamic = 'force-dynamic'
 
 import { getSeriesHistoryFrom, getSeriesLatestTwo } from '@/db/queries'
+import { hpGap } from '@/lib/hp-filter'
 import { ActivityDashboard } from './_components/activity-dashboard'
+import type { SeriesPoint } from '@/components/macro/types'
 
 const FROM = new Date('2001-01-01')
+
+function yoyGrowth(pts: SeriesPoint[]): { date: string; value: number }[] {
+  if (pts.length < 5) return []
+  const sorted = [...pts].sort((a, b) => a.date.localeCompare(b.date))
+  return sorted.flatMap((p, i) => {
+    if (i < 4) return []
+    const prev = sorted[i - 4]
+    return [{ date: p.date, value: parseFloat(((p.value / prev.value - 1) * 100).toFixed(2)) }]
+  })
+}
 
 export default async function AtividadePage() {
   const [
@@ -11,6 +23,8 @@ export default async function AtividadePage() {
     ibcVarMKv, ibcVar12Kv, varejoKv, iccKv,
     // Visão Geral
     ibcSaH, ibcNsaH, ibcVarMH, ibcVar12H, pibNsaH, pibSaH, pibNomH,
+    // VAB Setorial
+    vabAgroH, vabIndH, vabServH,
     // Indústria
     pimTotalH, pimTransfH, pimCapH, pimIntermH, pimDurH, iciH,
     // Comércio
@@ -18,48 +32,71 @@ export default async function AtividadePage() {
     // Serviços
     icsH,
     // PIB Demanda
-    pibConsH, pibExpH,
+    pibConsH, pibGovH, pibFbcfH, pibExpH,
+    // Condições Financeiras
+    spreadPfH, spreadPjH,
   ] = await Promise.all([
     // KPIs
-    getSeriesLatestTwo('22063'),   // IBC-Br var% mensal
-    getSeriesLatestTwo('22065'),   // IBC-Br var% 12m
-    getSeriesLatestTwo('1455'),    // Varejo Ampliado
-    getSeriesLatestTwo('22099'),   // ICC consumidor
+    getSeriesLatestTwo('22063'),
+    getSeriesLatestTwo('22065'),
+    getSeriesLatestTwo('1455'),
+    getSeriesLatestTwo('22099'),
     // Visão Geral
-    getSeriesHistoryFrom('24364', FROM),  // IBC-Br c/ ajuste saz.
-    getSeriesHistoryFrom('24363', FROM),  // IBC-Br s/ ajuste saz.
-    getSeriesHistoryFrom('22063', FROM),  // IBC-Br var% mensal
-    getSeriesHistoryFrom('22065', FROM),  // IBC-Br var% 12m
-    getSeriesHistoryFrom('22109', FROM),  // PIB encadeado s/ aj. saz.
-    getSeriesHistoryFrom('22110', FROM),  // PIB encadeado c/ aj. saz.
-    getSeriesHistoryFrom('4380',  FROM),  // PIB nominal 12m (R$ mi)
+    getSeriesHistoryFrom('24364', FROM),
+    getSeriesHistoryFrom('24363', FROM),
+    getSeriesHistoryFrom('22063', FROM),
+    getSeriesHistoryFrom('22065', FROM),
+    getSeriesHistoryFrom('22109', FROM),
+    getSeriesHistoryFrom('22110', FROM),
+    getSeriesHistoryFrom('4380',  FROM),
+    // VAB Setorial
+    getSeriesHistoryFrom('22103', FROM),
+    getSeriesHistoryFrom('22096', FROM),
+    getSeriesHistoryFrom('22097', FROM),
     // Indústria
-    getSeriesHistoryFrom('21859', FROM),  // PIM total
-    getSeriesHistoryFrom('21861', FROM),  // PIM Transformação
-    getSeriesHistoryFrom('21862', FROM),  // PIM Bens de Capital
-    getSeriesHistoryFrom('21863', FROM),  // PIM Bens Intermediários
-    getSeriesHistoryFrom('21864', FROM),  // PIM Bens de Consumo Duráveis
-    getSeriesHistoryFrom('22023', FROM),  // ICI confiança indústria
+    getSeriesHistoryFrom('21859', FROM),
+    getSeriesHistoryFrom('21861', FROM),
+    getSeriesHistoryFrom('21862', FROM),
+    getSeriesHistoryFrom('21863', FROM),
+    getSeriesHistoryFrom('21864', FROM),
+    getSeriesHistoryFrom('22023', FROM),
     // Comércio
-    getSeriesHistoryFrom('1455',  FROM),  // Varejo Ampliado
-    getSeriesHistoryFrom('1408',  FROM),  // PMC Combustíveis
-    getSeriesHistoryFrom('1409',  FROM),  // PMC Hipermercados/Alimentos
-    getSeriesHistoryFrom('1411',  FROM),  // PMC Móveis e Eletro
-    getSeriesHistoryFrom('1412',  FROM),  // PMC Farmácia e Perfumaria
-    getSeriesHistoryFrom('1413',  FROM),  // PMC Informática e Comunicação
-    getSeriesHistoryFrom('1416',  FROM),  // PMC Veículos e Peças
-    getSeriesHistoryFrom('22099', FROM),  // ICC consumidor
+    getSeriesHistoryFrom('1455',  FROM),
+    getSeriesHistoryFrom('1408',  FROM),
+    getSeriesHistoryFrom('1409',  FROM),
+    getSeriesHistoryFrom('1411',  FROM),
+    getSeriesHistoryFrom('1412',  FROM),
+    getSeriesHistoryFrom('1413',  FROM),
+    getSeriesHistoryFrom('1416',  FROM),
+    getSeriesHistoryFrom('22099', FROM),
     // Serviços
-    getSeriesHistoryFrom('22021', FROM),  // ICS confiança serviços
+    getSeriesHistoryFrom('22021', FROM),
     // PIB Demanda
-    getSeriesHistoryFrom('22113', FROM),  // PIB Consumo das Famílias
-    getSeriesHistoryFrom('22115', FROM),  // PIB Exportações
+    getSeriesHistoryFrom('22113', FROM),
+    getSeriesHistoryFrom('22114', FROM),
+    getSeriesHistoryFrom('22111', FROM),
+    getSeriesHistoryFrom('22115', FROM),
+    // Condições Financeiras
+    getSeriesHistoryFrom('20786', FROM),
+    getSeriesHistoryFrom('20787', FROM),
   ])
+
+  // Hiato do PIB via HP filter (λ=1600, dados trimestrais SA)
+  const pibSaPts = pibSaH?.data ?? []
+  const pibSaSorted = [...pibSaPts].sort((a, b) => a.date.localeCompare(b.date))
+  const pibGapValues = hpGap(pibSaSorted.map((p) => p.value))
+  const pibGap = pibSaSorted.map((p, i) => ({ date: p.date, value: pibGapValues[i] }))
+
+  // Crescimento anual (YoY, %) trimestral
+  const pibGrowth  = yoyGrowth(pibSaH?.data ?? [])
+  const agroGrowth = yoyGrowth(vabAgroH?.data ?? [])
+  const indGrowth  = yoyGrowth(vabIndH?.data ?? [])
+  const servGrowth = yoyGrowth(vabServH?.data ?? [])
 
   return (
     <ActivityDashboard
       data={{
-        ibcVarMKv,  ibcVar12Kv, varejoKv, iccKv,
+        ibcVarMKv, ibcVar12Kv, varejoKv, iccKv,
         ibcSa:     ibcSaH?.data    ?? [],
         ibcNsa:    ibcNsaH?.data   ?? [],
         ibcVarM:   ibcVarMH?.data  ?? [],
@@ -67,6 +104,14 @@ export default async function AtividadePage() {
         pibNsa:    pibNsaH?.data   ?? [],
         pibSa:     pibSaH?.data    ?? [],
         pibNom:    pibNomH?.data   ?? [],
+        pibGap,
+        pibGrowth,
+        vabAgro:       vabAgroH?.data ?? [],
+        vabInd:        vabIndH?.data  ?? [],
+        vabServ:       vabServH?.data ?? [],
+        agroGrowth,
+        indGrowth,
+        servGrowth,
         pimTotal:  pimTotalH?.data  ?? [],
         pimTransf: pimTransfH?.data ?? [],
         pimCap:    pimCapH?.data    ?? [],
@@ -83,7 +128,11 @@ export default async function AtividadePage() {
         icc:       iccH?.data       ?? [],
         ics:       icsH?.data       ?? [],
         pibCons:   pibConsH?.data   ?? [],
+        pibGov:    pibGovH?.data    ?? [],
+        pibFbcf:   pibFbcfH?.data   ?? [],
         pibExp:    pibExpH?.data    ?? [],
+        spreadPf:  spreadPfH?.data  ?? [],
+        spreadPj:  spreadPjH?.data  ?? [],
       }}
     />
   )

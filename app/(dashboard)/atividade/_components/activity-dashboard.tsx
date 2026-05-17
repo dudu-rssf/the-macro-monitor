@@ -21,6 +21,15 @@ interface ActivityData {
   pibNsa:   SeriesPoint[]
   pibSa:    SeriesPoint[]
   pibNom:   SeriesPoint[]
+  pibGap:   { date: string; value: number }[]
+  pibGrowth: { date: string; value: number }[]
+  // VAB Setorial
+  vabAgro:       SeriesPoint[]
+  vabInd:        SeriesPoint[]
+  vabServ:       SeriesPoint[]
+  agroGrowth:    { date: string; value: number }[]
+  indGrowth:     { date: string; value: number }[]
+  servGrowth:    { date: string; value: number }[]
   // Indústria
   pimTotal:  SeriesPoint[]
   pimTransf: SeriesPoint[]
@@ -41,13 +50,18 @@ interface ActivityData {
   ics: SeriesPoint[]
   // PIB Demanda
   pibCons: SeriesPoint[]
+  pibGov:  SeriesPoint[]
+  pibFbcf: SeriesPoint[]
   pibExp:  SeriesPoint[]
+  // Condições Financeiras
+  spreadPf: SeriesPoint[]
+  spreadPj: SeriesPoint[]
 }
 
 interface Props { data: ActivityData }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mergeByDate(seriesMap: Record<string, SeriesPoint[]>): any[] {
+function mergeByDate(seriesMap: Record<string, { date: string; value: number }[]>): any[] {
   const dateSet = new Set<string>()
   for (const pts of Object.values(seriesMap)) pts.forEach((p) => dateSet.add(p.date))
   const dates = Array.from(dateSet).sort()
@@ -75,12 +89,14 @@ export function ActivityDashboard({ data }: Props) {
 
   const ibcNivelData  = mergeByDate({ sa: data.ibcSa, nsa: data.ibcNsa })
   const pibTrimData   = mergeByDate({ sa: data.pibSa, nsa: data.pibNsa })
+  const vabSetorData  = mergeByDate({ agro: data.vabAgro, ind: data.vabInd, serv: data.vabServ })
+  const growthData    = mergeByDate({ pib: data.pibGrowth, agro: data.agroGrowth, ind: data.indGrowth, serv: data.servGrowth })
   const pimSegsData   = mergeByDate({ transf: data.pimTransf, cap: data.pimCap, interm: data.pimInterm, dur: data.pimDur })
   const pmcEssData    = mergeByDate({ hiper: data.pmcHiper, farm: data.pmcFarm, comb: data.pmcComb })
   const pmcDiscData   = mergeByDate({ mov: data.pmcMov, info: data.pmcInfo, veic: data.pmcVeic })
   const confGerData   = mergeByDate({ icc: data.icc, ici: data.ici, ics: data.ics })
-  const pibDemData    = mergeByDate({ cons: data.pibCons, exp: data.pibExp })
-  // PIB nominal: BCB reporta em R$ milhões → dividir por 1000 para R$ bilhões
+  const demandaData   = mergeByDate({ cons: data.pibCons, gov: data.pibGov, fbcf: data.pibFbcf, exp: data.pibExp })
+  const spreadData    = mergeByDate({ pf: data.spreadPf, pj: data.spreadPj })
   const pibNomData    = data.pibNom.map((p) => ({ date: p.date, value: p.value / 1000 }))
 
   return (
@@ -139,7 +155,7 @@ export function ActivityDashboard({ data }: Props) {
       </div>
 
       {/* ── SEÇÃO: VISÃO GERAL ───────────────────────────── */}
-      <SectionDivider title="Visão Geral" description="IBC-Br e PIB — nível e variações" />
+      <SectionDivider title="Visão Geral" description="IBC-Br e PIB — nível, variações e hiato do produto" />
 
       <SectionCard title="IBC-Br — nível mensal (índice, proxy do PIB)" sectionId="ibc-nivel" {...sectionProps}>
         {(range) => (
@@ -202,6 +218,50 @@ export function ActivityDashboard({ data }: Props) {
           )}
         </SectionCard>
       </div>
+
+      <SectionCard title="Hiato do Produto — desvio do PIB em relação ao potencial (HP filter, % )" sectionId="pib-gap" {...sectionProps}>
+        {(range) => (
+          <MacroChart
+            allData={data.pibGap}
+            series={[{ key: 'value', label: 'Hiato do PIB', color: 'var(--chart-2)' }]}
+            referenceLines={[{ value: 0, label: 'potencial', color: 'var(--muted-foreground)' }]}
+            unit="%" height={240} chartType="bar" effectiveRange={range}
+          />
+        )}
+      </SectionCard>
+
+      {/* ── SEÇÃO: VAB POR SETOR ─────────────────────────── */}
+      <SectionDivider title="VAB por Setor" description="Valor Adicionado Bruto — Agropecuária, Indústria e Serviços (trimestral, índice encadeado)" />
+
+      <SectionCard title="VAB Setorial — nível (índice encadeado, base 1995=100)" sectionId="vab-nivel" {...sectionProps}>
+        {(range) => (
+          <MacroChart
+            allData={vabSetorData}
+            series={[
+              { key: 'agro', label: 'Agropecuária',  color: 'var(--chart-3)' },
+              { key: 'ind',  label: 'Indústria',     color: 'var(--chart-2)' },
+              { key: 'serv', label: 'Serviços',      color: 'var(--chart-1)' },
+            ]}
+            unit="" height={280} effectiveRange={range}
+          />
+        )}
+      </SectionCard>
+
+      <SectionCard title="Crescimento por Setor — variação anual % (YoY, comparativo com PIB total)" sectionId="vab-crescimento" {...sectionProps}>
+        {(range) => (
+          <MacroChart
+            allData={growthData}
+            series={[
+              { key: 'pib',  label: 'PIB total',    color: 'var(--chart-5)' },
+              { key: 'agro', label: 'Agropecuária', color: 'var(--chart-3)' },
+              { key: 'ind',  label: 'Indústria',    color: 'var(--chart-2)' },
+              { key: 'serv', label: 'Serviços',     color: 'var(--chart-1)' },
+            ]}
+            referenceLines={[{ value: 0, label: '0%', color: 'var(--muted-foreground)' }]}
+            unit="%" height={280} effectiveRange={range}
+          />
+        )}
+      </SectionCard>
 
       {/* ── SEÇÃO: INDÚSTRIA ─────────────────────────────── */}
       <SectionDivider title="Indústria" description="Produção Industrial — PIM/IBGE por segmento e confiança" />
@@ -321,8 +381,39 @@ export function ActivityDashboard({ data }: Props) {
         )}
       </SectionCard>
 
-      {/* ── SEÇÃO: PIB DEMANDA ───────────────────────────── */}
-      <SectionDivider title="PIB pelo Lado da Demanda" description="Componentes trimestrais — Consumo das Famílias e Exportações (índice encadeado, base 1995=100)" />
+      {/* ── SEÇÃO: CONDIÇÕES FINANCEIRAS ─────────────────── */}
+      <SectionDivider title="Condições Financeiras" description="Spread bancário — custo do crédito acima do funding, indicador de aperto/afrouxamento financeiro" />
+
+      <SectionCard title="Spread Bancário — Pessoas Físicas vs. Pessoas Jurídicas (% a.a.)" sectionId="spread" {...sectionProps}>
+        {(range) => (
+          <MacroChart
+            allData={spreadData}
+            series={[
+              { key: 'pf', label: 'Spread PF (% a.a.)', color: 'var(--chart-1)' },
+              { key: 'pj', label: 'Spread PJ (% a.a.)', color: 'var(--chart-4)' },
+            ]}
+            unit="% a.a." height={260} effectiveRange={range}
+          />
+        )}
+      </SectionCard>
+
+      {/* ── SEÇÃO: PIB PELO LADO DA DEMANDA ─────────────── */}
+      <SectionDivider title="PIB pelo Lado da Demanda" description="Consumo das Famílias, Governo, FBCF e Exportações — índice encadeado trimestral (base 1995=100)" />
+
+      <SectionCard title="Componentes da Demanda — Famílias, Governo, FBCF e Exportações" sectionId="pib-dem" {...sectionProps}>
+        {(range) => (
+          <MacroChart
+            allData={demandaData}
+            series={[
+              { key: 'cons', label: 'Consumo das Famílias', color: 'var(--chart-1)' },
+              { key: 'gov',  label: 'Consumo do Governo',   color: 'var(--chart-2)' },
+              { key: 'fbcf', label: 'FBCF (Investimento)',  color: 'var(--chart-3)' },
+              { key: 'exp',  label: 'Exportações',          color: 'var(--chart-5)' },
+            ]}
+            unit="" height={280} effectiveRange={range}
+          />
+        )}
+      </SectionCard>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <SectionCard title="Consumo das Famílias — trimestral (índice encadeado)" sectionId="pib-cons" {...sectionProps}>
@@ -330,6 +421,28 @@ export function ActivityDashboard({ data }: Props) {
             <MacroChart
               allData={data.pibCons.map((p) => ({ date: p.date, value: p.value }))}
               series={[{ key: 'value', label: 'Consumo das Famílias', color: 'var(--chart-1)' }]}
+              unit="" height={240} effectiveRange={range}
+            />
+          )}
+        </SectionCard>
+
+        <SectionCard title="FBCF — Formação Bruta de Capital Fixo (trimestral, índice encadeado)" sectionId="pib-fbcf" {...sectionProps}>
+          {(range) => (
+            <MacroChart
+              allData={data.pibFbcf.map((p) => ({ date: p.date, value: p.value }))}
+              series={[{ key: 'value', label: 'FBCF (Investimento)', color: 'var(--chart-3)' }]}
+              unit="" height={240} effectiveRange={range}
+            />
+          )}
+        </SectionCard>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <SectionCard title="Consumo do Governo — trimestral (índice encadeado)" sectionId="pib-gov" {...sectionProps}>
+          {(range) => (
+            <MacroChart
+              allData={data.pibGov.map((p) => ({ date: p.date, value: p.value }))}
+              series={[{ key: 'value', label: 'Consumo do Governo', color: 'var(--chart-2)' }]}
               unit="" height={240} effectiveRange={range}
             />
           )}
@@ -345,19 +458,6 @@ export function ActivityDashboard({ data }: Props) {
           )}
         </SectionCard>
       </div>
-
-      <SectionCard title="Consumo das Famílias vs. Exportações — componentes do PIB" sectionId="pib-dem" {...sectionProps}>
-        {(range) => (
-          <MacroChart
-            allData={pibDemData}
-            series={[
-              { key: 'cons', label: 'Consumo das Famílias', color: 'var(--chart-1)' },
-              { key: 'exp',  label: 'Exportações',          color: 'var(--chart-5)' },
-            ]}
-            unit="" height={260} effectiveRange={range}
-          />
-        )}
-      </SectionCard>
 
     </div>
   )
