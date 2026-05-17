@@ -26,6 +26,7 @@ interface FocusRow { year: string; median: number | null }
 interface MonetaryData {
   selicKv:   { latest: SeriesPoint; previous: SeriesPoint | null } | null
   ipca12mKv: { latest: SeriesPoint; previous: SeriesPoint | null } | null
+  embiKv:    { latest: SeriesPoint; previous: SeriesPoint | null } | null
   selic:     SeriesPoint[]
   ipca12m:   SeriesPoint[]
   realRate:  SeriesPoint[]
@@ -41,6 +42,7 @@ interface MonetaryData {
   m3:           SeriesPoint[]
   m4:           SeriesPoint[]
   baseRestrito: SeriesPoint[]
+  embi:         SeriesPoint[]
   ettj: EttjCurve
 }
 
@@ -238,6 +240,10 @@ export function MonetaryDashboard({ data }: Props) {
         <FocusCard title="Expectativas Focus — Selic (% a.a.)" rows={data.focusSelic} unit="% a.a." color="var(--chart-1)" />
       </div>
 
+      {/* ── BPS PRECIFICADOS ────────────────────────────────── */}
+      <SectionDivider title="Cortes Precificados pela Curva" description="Bps implícitos nas projeções do Focus Selic — diferença entre a Selic atual e as medianas projetadas" />
+      <BpsPrecificados selicNow={selicNow} focusSelic={data.focusSelic} />
+
       {/* ── SEÇÃO: AGREGADOS MONETÁRIOS ─────────────────────── */}
       <SectionDivider title="Agregados Monetários" description="Meios de pagamento, base monetária ampliada e compulsórios — BCB SGS (R$ bilhões)" />
 
@@ -298,6 +304,39 @@ export function MonetaryDashboard({ data }: Props) {
           )}
         </SectionCard>
       </div>
+
+      {/* ── SEÇÃO: RISCO-PAÍS ───────────────────────────────── */}
+      <SectionDivider title="Risco-País" description="EMBI+ JP Morgan — spread dos títulos brasileiros sobre os Treasuries americanos (pontos-base)" />
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <KpiCard
+          title="EMBI+ Risco-Brasil"
+          value={data.embiKv?.latest.value ?? null}
+          unit=" bps"
+          date={data.embiKv?.latest.date}
+          delta={data.embiKv?.previous ? data.embiKv.latest.value - data.embiKv.previous.value : null}
+          deltaUnit=" bps"
+          badge={data.embiKv?.latest.value != null ? {
+            label: data.embiKv.latest.value < 200 ? 'Baixo' : data.embiKv.latest.value < 400 ? 'Moderado' : 'Alto',
+            variant: data.embiKv.latest.value < 200 ? 'secondary' : data.embiKv.latest.value < 400 ? 'outline' : 'destructive',
+          } : undefined}
+          deltaInvert
+        />
+      </div>
+
+      <SectionCard title="EMBI+ Risco-Brasil — histórico (pontos-base)" sectionId="embi-pm" {...sectionProps}>
+        {(range) => (
+          <MacroChart
+            allData={data.embi.map((p) => ({ date: p.date, value: p.value }))}
+            series={[{ key: 'value', label: 'EMBI+ Brasil', color: 'var(--chart-5)' }]}
+            referenceLines={[
+              { value: 200, label: '200 bps', color: 'hsl(142 76% 40%)' },
+              { value: 400, label: '400 bps', color: 'hsl(0 72% 51%)' },
+            ]}
+            unit=" bps" height={260} effectiveRange={range}
+          />
+        )}
+      </SectionCard>
 
       {/* ── SEÇÃO: ANÁLISES COPOM ───────────────────────────── */}
       <SectionDivider title="Análises COPOM" description="Ciclos históricos de alta e corte da Selic desde 2001 — bps movidos por ciclo" />
@@ -643,6 +682,54 @@ function CopomCyclesSection({ cycles, selicData }: { cycles: CopomCycle[]; selic
           )}
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// BPS precificados pelo Focus Selic
+function BpsPrecificados({ selicNow, focusSelic }: { selicNow: number | null; focusSelic: { year: string; median: number | null }[] }) {
+  if (selicNow === null || focusSelic.length === 0) return null
+
+  const byYear = new Map(focusSelic.map((r) => [r.year, r.median]))
+  const currentYear = String(new Date().getFullYear())
+  const nextYear    = String(Number(currentYear) + 1)
+  const horizonYear = focusSelic.at(-1)?.year ?? nextYear
+
+  function bps(target: number | null | undefined): string {
+    if (target == null) return '—'
+    const diff = Math.round((selicNow! - target) * 100)
+    return diff > 0 ? `-${diff} bps` : diff < 0 ? `+${Math.abs(diff)} bps` : '0 bps'
+  }
+
+  const focus2026 = byYear.get(currentYear === '2026' ? currentYear : '2026')
+  const focus2027 = byYear.get('2027')
+  const focusNext = byYear.get(nextYear)
+  const focusHorizon = focusSelic.at(-1)?.median ?? null
+
+  const items = [
+    { label: `Até fim de ${currentYear}`, bpsStr: bps(byYear.get(currentYear)), target: byYear.get(currentYear) },
+    { label: 'Até fim de 2026',           bpsStr: bps(focus2026),               target: focus2026 },
+    { label: 'Ao longo de 2027',          bpsStr: bps(focus2027) !== bps(focus2026) ? (() => { const a = focus2026; const b = focus2027; if (a==null||b==null) return '—'; const d=Math.round((a-b)*100); return d>0?`-${d} bps`:d<0?`+${Math.abs(d)} bps`:'0 bps' })() : '—', target: focus2027 },
+    { label: `Até fim de 2027`,           bpsStr: bps(focus2027),               target: focus2027 },
+    { label: `Horizonte (${horizonYear})`, bpsStr: bps(focusHorizon),           target: focusHorizon },
+  ].filter((it, i, arr) => it.bpsStr !== '—' && arr.findIndex((x) => x.label === it.label) === i)
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {items.slice(0, 4).map((it) => (
+        <Card key={it.label} className="bg-card border-border">
+          <CardContent className="pt-3 pb-3 px-4">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide leading-tight">{it.label}</p>
+            <p className={`text-xl font-semibold mt-0.5 ${it.bpsStr.startsWith('-') ? 'text-green-500' : it.bpsStr.startsWith('+') ? 'text-red-500' : ''}`}>
+              {it.bpsStr}
+            </p>
+            {it.target != null && (
+              <p className="text-[10px] text-muted-foreground">Focus: {it.target.toFixed(2)}% a.a.</p>
+            )}
+          </CardContent>
+        </Card>
+      ))}
     </div>
   )
 }

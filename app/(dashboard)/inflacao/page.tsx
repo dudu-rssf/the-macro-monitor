@@ -17,6 +17,8 @@ export default async function InflacaoPage() {
     difusaoH,
     igpmH, igpdiH, ipamH, ipcmH, inccmH, inpcH,
     icbrGeralH, icbrAgroH, icbrMetalH, icbrEnergiaH,
+    gr1635H, gr1636H, gr1637H, gr1638H, gr1639H,
+    gr1640H, gr1641H, gr1642H, gr1643H,
   ] = await Promise.all([
     getSeriesLatestTwo('433'),    // IPCA kv
     getSeriesLatestTwo('13522'),  // IPCA 12m kv
@@ -41,6 +43,15 @@ export default async function InflacaoPage() {
     getSeriesHistoryFrom('27575', FROM),   // IC-Br Agro
     getSeriesHistoryFrom('27576', FROM),   // IC-Br Metal
     getSeriesHistoryFrom('27577', FROM),   // IC-Br Energia
+    getSeriesHistoryFrom('1635',  FROM),   // Grupos IPCA
+    getSeriesHistoryFrom('1636',  FROM),
+    getSeriesHistoryFrom('1637',  FROM),
+    getSeriesHistoryFrom('1638',  FROM),
+    getSeriesHistoryFrom('1639',  FROM),
+    getSeriesHistoryFrom('1640',  FROM),
+    getSeriesHistoryFrom('1641',  FROM),
+    getSeriesHistoryFrom('1642',  FROM),
+    getSeriesHistoryFrom('1643',  FROM),
   ])
 
   return (
@@ -71,6 +82,15 @@ export default async function InflacaoPage() {
         icbrAgro:    icbrAgroH?.data    ?? [],
         icbrMetal:   icbrMetalH?.data   ?? [],
         icbrEnergia: icbrEnergiaH?.data ?? [],
+        gr1635: gr1635H?.data ?? [],
+        gr1636: gr1636H?.data ?? [],
+        gr1637: gr1637H?.data ?? [],
+        gr1638: gr1638H?.data ?? [],
+        gr1639: gr1639H?.data ?? [],
+        gr1640: gr1640H?.data ?? [],
+        gr1641: gr1641H?.data ?? [],
+        gr1642: gr1642H?.data ?? [],
+        gr1643: gr1643H?.data ?? [],
       }}
     />
   )

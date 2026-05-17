@@ -35,12 +35,32 @@ interface InflationData {
   icbrAgro:   SeriesPoint[]
   icbrMetal:  SeriesPoint[]
   icbrEnergia: SeriesPoint[]
+  // Grupos IPCA
+  gr1635: SeriesPoint[]   // Alimentação e bebidas
+  gr1636: SeriesPoint[]   // Habitação
+  gr1637: SeriesPoint[]   // Artigos de residência
+  gr1638: SeriesPoint[]   // Vestuário
+  gr1639: SeriesPoint[]   // Transportes
+  gr1640: SeriesPoint[]   // Saúde e cuidados pessoais
+  gr1641: SeriesPoint[]   // Despesas pessoais
+  gr1642: SeriesPoint[]   // Educação
+  gr1643: SeriesPoint[]   // Comunicação
 }
 
 interface Props {
   data: InflationData
   metaCentral: number
   metaTeto: number
+}
+
+function rolling12m(pts: SeriesPoint[]): SeriesPoint[] {
+  const result: SeriesPoint[] = []
+  for (let i = 11; i < pts.length; i++) {
+    let acc = 1
+    for (let j = i - 11; j <= i; j++) acc *= (1 + pts[j].value / 100)
+    result.push({ date: pts[i].date, value: parseFloat(((acc - 1) * 100).toFixed(2)) })
+  }
+  return result
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -74,7 +94,54 @@ export function InflationDashboard({ data, metaCentral, metaTeto }: Props) {
     : { label: 'Acima do teto', variant: 'destructive' as const }
 
   const panoramaData = mergeByDate({ ipca12m: data.ipca12m, ipca: data.ipca, ipca15: data.ipca15 })
-  const nucleosData  = mergeByDate({ ms: data.nucleoMs, ma: data.nucleoMa, ex: data.nucleoEx, dp: data.nucleoDp, p55: data.nucleoP55 })
+  const nucleosData  = mergeByDate({
+    ms:  rolling12m(data.nucleoMs),
+    ma:  rolling12m(data.nucleoMa),
+    ex:  rolling12m(data.nucleoEx),
+    dp:  rolling12m(data.nucleoDp),
+    p55: rolling12m(data.nucleoP55),
+  })
+  // Pré-computa rolling 12m de cada grupo
+  const r12 = {
+    alim: rolling12m(data.gr1635),
+    hab:  rolling12m(data.gr1636),
+    res:  rolling12m(data.gr1637),
+    ves:  rolling12m(data.gr1638),
+    tra:  rolling12m(data.gr1639),
+    sau:  rolling12m(data.gr1640),
+    des:  rolling12m(data.gr1641),
+    edu:  rolling12m(data.gr1642),
+    com:  rolling12m(data.gr1643),
+  }
+
+  // Decomposição por grupos (cada um em sua própria série)
+  const gruposData = mergeByDate({
+    alimentacao: r12.alim, habitacao: r12.hab, residencia: r12.res,
+    vestuario:   r12.ves,  transportes: r12.tra, saude: r12.sau,
+    despesas:    r12.des,  educacao: r12.edu,  comunicacao: r12.com,
+  })
+
+  // Áreas de influência (média simples dos grupos de cada área):
+  // Câmbio: Alimentação, Artigos de residência, Transportes
+  // Renda:  Saúde, Despesas pessoais, Educação, Comunicação
+  // Juros:  Habitação, Vestuário
+  function avgSeries(seriesList: SeriesPoint[][]): SeriesPoint[] {
+    const merged = mergeByDate(Object.fromEntries(seriesList.map((s, i) => [String(i), s])))
+    const n = seriesList.length
+    return merged
+      .filter((row) => seriesList.every((_, i) => row[String(i)] !== undefined))
+      .map((row) => ({
+        date:  row.date as string,
+        value: parseFloat((seriesList.reduce((sum, _, i) => sum + (row[String(i)] as number), 0) / n).toFixed(2)),
+      }))
+  }
+
+  const areasData = mergeByDate({
+    cambio: avgSeries([r12.alim, r12.res, r12.tra]),
+    renda:  avgSeries([r12.sau, r12.des, r12.edu, r12.com]),
+    juros:  avgSeries([r12.hab, r12.ves]),
+  })
+
   const igpmData     = mergeByDate({ igpm: data.igpm, igpdi: data.igpdi })
   const igpmCompData = mergeByDate({ ipam: data.ipam, ipcm: data.ipcm, inccm: data.inccm })
   const comparData   = mergeByDate({ ipca: data.ipca, inpc: data.inpc, igpm: data.igpm })
@@ -135,24 +202,25 @@ export function InflationDashboard({ data, metaCentral, metaTeto }: Props) {
         )}
       </SectionCard>
 
-      <SectionCard title="Difusao do IPCA — itens com alta (%)" sectionId="difusao" {...sectionProps}>
+      <SectionCard title="Difusão do IPCA — itens com alta (%)" sectionId="difusao" {...sectionProps}>
         {(range) => (
           <MacroChart allData={data.difusao.map((p) => ({ date: p.date, value: p.value }))}
-            series={[{ key: 'value', label: 'Difusao', color: 'var(--chart-5)' }]}
+            series={[{ key: 'value', label: 'Difusão', color: 'var(--chart-5)' }]}
             referenceLines={[{ value: 50, label: '50%', color: 'var(--muted-foreground)' }]}
-            unit="%" height={220} chartType="bar" effectiveRange={range} />
+            unit="%" height={220} chartType="bar" effectiveRange={range}
+            yDomain={[0, 100]} />
         )}
       </SectionCard>
 
-      <SectionCard title="Nucleos do IPCA — 5 medidas BCB (%)" sectionId="nucleos" {...sectionProps}>
+      <SectionCard title="Núcleos do IPCA — 5 medidas BCB (acumulado 12 meses, %)" sectionId="nucleos" {...sectionProps}>
         {(range) => (
           <MacroChart allData={nucleosData}
             series={[
-              { key: 'ms',  label: 'Med. Ap. c/ Suav.', color: 'var(--chart-1)' },
-              { key: 'ma',  label: 'Med. Ap. s/ Suav.', color: 'var(--chart-2)' },
-              { key: 'ex',  label: 'Por Exclusao',      color: 'var(--chart-3)' },
-              { key: 'dp',  label: 'Dupla Ponderacao',  color: 'var(--chart-4)' },
-              { key: 'p55', label: 'P55',               color: 'var(--chart-5)' },
+              { key: 'ms',  label: 'Médias Aparadas com Suavização', color: 'var(--chart-1)' },
+              { key: 'ma',  label: 'Médias Aparadas sem Suavização',  color: 'var(--chart-2)' },
+              { key: 'ex',  label: 'Por Exclusão',                    color: 'var(--chart-3)' },
+              { key: 'dp',  label: 'Dupla Ponderação',                color: 'var(--chart-4)' },
+              { key: 'p55', label: 'P55',                             color: 'var(--chart-5)' },
             ]}
             referenceLines={[
               { value: metaCentral, label: `Meta ${metaCentral}%`, color: 'hsl(142 76% 40%)' },
@@ -162,7 +230,46 @@ export function InflationDashboard({ data, metaCentral, metaTeto }: Props) {
         )}
       </SectionCard>
 
-      <SectionCard title="Comparativo de indices — variacao mensal (%)" sectionId="comparativo" {...sectionProps}>
+      {/* ── Decomposição por grupos ─────────────────────────── */}
+      <SectionCard title="IPCA acumulado 12 meses — por grupos do IBGE (%)" sectionId="grupos" {...sectionProps}>
+        {(range) => (
+          <MacroChart allData={gruposData}
+            series={[
+              { key: 'alimentacao', label: 'Alimentação e Bebidas',      color: 'var(--chart-1)' },
+              { key: 'habitacao',   label: 'Habitação',                   color: 'var(--chart-2)' },
+              { key: 'residencia',  label: 'Artigos de Residência',       color: 'var(--chart-3)' },
+              { key: 'vestuario',   label: 'Vestuário',                   color: 'var(--chart-4)' },
+              { key: 'transportes', label: 'Transportes',                 color: 'var(--chart-5)' },
+              { key: 'saude',       label: 'Saúde e Cuidados Pessoais',   color: 'hsl(280 70% 60%)' },
+              { key: 'despesas',    label: 'Despesas Pessoais',           color: 'hsl(30 90% 55%)' },
+              { key: 'educacao',    label: 'Educação',                    color: 'hsl(200 80% 50%)' },
+              { key: 'comunicacao', label: 'Comunicação',                 color: 'hsl(160 60% 45%)' },
+            ]}
+            referenceLines={[
+              { value: metaCentral, label: `Meta ${metaCentral}%`, color: 'hsl(142 76% 40%)' },
+              { value: metaTeto,    label: `Teto ${metaTeto}%`,    color: 'hsl(0 72% 51%)' },
+            ]}
+            unit="%" height={340} effectiveRange={range} />
+        )}
+      </SectionCard>
+
+      <SectionCard title="IPCA — Áreas de influência: câmbio, renda e juros (12m, %)" sectionId="areas" {...sectionProps}>
+        {(range) => (
+          <MacroChart allData={areasData}
+            series={[
+              { key: 'cambio', label: 'Sensível ao Câmbio (Alimentação, Artigos de Residência, Transportes)', color: 'var(--chart-1)' },
+              { key: 'renda',  label: 'Sensível à Renda (Saúde, Despesas Pessoais, Educação, Comunicação)',   color: 'var(--chart-3)' },
+              { key: 'juros',  label: 'Sensível aos Juros (Habitação, Vestuário)',                             color: 'var(--chart-5)' },
+            ]}
+            referenceLines={[
+              { value: metaCentral, label: `Meta ${metaCentral}%`, color: 'hsl(142 76% 40%)' },
+              { value: metaTeto,    label: `Teto ${metaTeto}%`,    color: 'hsl(0 72% 51%)' },
+            ]}
+            unit="%" height={300} effectiveRange={range} />
+        )}
+      </SectionCard>
+
+      <SectionCard title="Comparativo de Índices — variação mensal (%)" sectionId="comparativo" {...sectionProps}>
         {(range) => (
           <MacroChart allData={comparData}
             series={[

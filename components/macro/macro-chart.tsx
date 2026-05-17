@@ -30,6 +30,7 @@ interface MacroChartProps {
   effectiveRange: TimeRange
   xKey?: string
   xFormatter?: (value: string) => string
+  yDomain?: [number, number]
 }
 
 export function cutData(data: { date: string }[], range: TimeRange) {
@@ -90,11 +91,11 @@ function computeYDomain(data: any[], seriesKeys: string[], refLineValues: number
 
 export function MacroChart({
   allData, series, referenceLines = [], unit = '%', height = 280,
-  chartType = 'line', effectiveRange, xKey = 'date', xFormatter
+  chartType = 'line', effectiveRange, xKey = 'date', xFormatter, yDomain: yDomainProp,
 }: MacroChartProps) {
   const data = xKey === 'date' ? cutData(allData as { date: string }[], effectiveRange) : allData
 
-  const yDomain = computeYDomain(
+  const yDomain = yDomainProp ?? computeYDomain(
     data,
     series.map((s) => s.key),
     referenceLines.map((r) => r.value),
@@ -136,7 +137,16 @@ export function MacroChart({
     <ChartTooltip
       content={
         <ChartTooltipContent
-          formatter={(value) => formatValue(Number(value), unit)}
+          formatter={(value, name) => {
+            const cfg = config[name as string]
+            const label = cfg?.label ?? String(name)
+            return (
+              <div className="flex items-center justify-between gap-6 w-full">
+                <span className="text-muted-foreground">{label}</span>
+                <span className="font-mono font-medium tabular-nums">{formatValue(Number(value), unit)}</span>
+              </div>
+            )
+          }}
           labelFormatter={(label) => tickFmt(String(label))}
         />
       }

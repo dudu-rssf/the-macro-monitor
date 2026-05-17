@@ -167,18 +167,20 @@ export const INFLATION_TARGETS = [
 // ────────────────────────────────────────────────────────────────────────────
 export default async function PoliticaMonetariaPage() {
   const [
-    selicKv, ipca12mKv,
+    selicKv, ipca12mKv, embiKv,
     selicH, ipca12mH, diOverH,
     selicLongH,
     m1H, m2H, bmaH, compH, m3H, m4H, baseRestritoH,
+    embiH,
     focusIpcaRaw, focusSelicRaw,
     ettj,
   ] = await Promise.all([
     getSeriesLatestTwo('4189'),
     getSeriesLatestTwo('13522'),
+    getSeriesLatestTwo('11752'),
     getSeriesHistoryFrom('4189',  FROM),
     getSeriesHistoryFrom('13522', FROM),
-    getSeriesMonthly('7806', FROM),
+    getSeriesMonthly('4389', FROM),
     getSeriesHistoryFrom('4189',  FROM_LONG),   // Selic longa para ciclos COPOM
     getSeriesHistoryFrom('1786',  FROM_LONG),   // M1
     getSeriesHistoryFrom('1788',  FROM_LONG),   // M2
@@ -187,6 +189,7 @@ export default async function PoliticaMonetariaPage() {
     getSeriesHistoryFrom('27815', FROM_LONG),   // M3
     getSeriesHistoryFrom('27813', FROM_LONG),   // M4
     getSeriesMonthly('1782',    FROM_LONG),     // Base Restrita diária → mensal (para multiplicador)
+    getSeriesMonthly('11752', FROM),            // EMBI+ risco-Brasil
     fetchFocusAnual('IPCA',  30).catch(() => []),
     fetchFocusAnual('Selic', 30).catch(() => []),
     fetchEttj().catch(() => ({ pre: [], ipca: [], impl: [] })),
@@ -210,6 +213,7 @@ export default async function PoliticaMonetariaPage() {
       data={{
         selicKv,
         ipca12mKv,
+        embiKv,
         selic:    selicData,
         ipca12m:  ipca12Data,
         realRate,
@@ -225,6 +229,7 @@ export default async function PoliticaMonetariaPage() {
         m3:           m3H?.data           ?? [],
         m4:           m4H?.data           ?? [],
         baseRestrito: baseRestritoH       ?? [],
+        embi:         embiH,
         ettj,
       }}
     />
