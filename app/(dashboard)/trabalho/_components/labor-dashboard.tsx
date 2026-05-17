@@ -8,54 +8,46 @@ import { SectionDivider } from '@/components/macro/section-divider'
 import { RangeSelector } from '@/components/macro/range-selector'
 import type { TimeRange, SeriesPoint } from '@/components/macro/types'
 
-// NAIRU estimada para o Brasil (fonte: IMF/estimativa estrutural)
+// NAIRU estimada para o Brasil (fonte: FMI — estimativa estrutural)
 // Representa a taxa de desemprego de equilíbrio (não aceleradora de inflação)
 const NAIRU: { date: string; value: number }[] = [
-  {date:'2015-01-01',value:9.838},{date:'2015-02-01',value:9.835},{date:'2015-03-01',value:9.831},
-  {date:'2015-04-01',value:9.828},{date:'2015-05-01',value:9.823},{date:'2015-06-01',value:9.818},
-  {date:'2015-07-01',value:9.813},{date:'2015-08-01',value:9.807},{date:'2015-09-01',value:9.800},
-  {date:'2015-10-01',value:9.794},{date:'2015-11-01',value:9.785},{date:'2015-12-01',value:9.777},
-  {date:'2016-01-01',value:9.768},{date:'2016-02-01',value:9.757},{date:'2016-03-01',value:9.747},
-  {date:'2016-04-01',value:9.736},{date:'2016-05-01',value:9.723},{date:'2016-06-01',value:9.710},
-  {date:'2016-07-01',value:9.697},{date:'2016-08-01',value:9.681},{date:'2016-09-01',value:9.666},
-  {date:'2016-10-01',value:9.651},{date:'2016-11-01',value:9.633},{date:'2016-12-01',value:9.615},
-  {date:'2017-01-01',value:9.598},{date:'2017-02-01',value:9.578},{date:'2017-03-01',value:9.558},
-  {date:'2017-04-01',value:9.538},{date:'2017-05-01',value:9.516},{date:'2017-06-01',value:9.494},
-  {date:'2017-07-01',value:9.473},{date:'2017-08-01',value:9.449},{date:'2017-09-01',value:9.426},
-  {date:'2017-10-01',value:9.402},{date:'2017-11-01',value:9.378},{date:'2017-12-01',value:9.353},
-  {date:'2018-01-01',value:9.328},{date:'2018-02-01',value:9.303},{date:'2018-03-01',value:9.278},
-  {date:'2018-04-01',value:9.252},{date:'2018-05-01',value:9.226},{date:'2018-06-01',value:9.200},
-  {date:'2018-07-01',value:9.175},{date:'2018-08-01',value:9.149},{date:'2018-09-01',value:9.123},
-  {date:'2018-10-01',value:9.097},{date:'2018-11-01',value:9.072},{date:'2018-12-01',value:9.046},
-  {date:'2019-01-01',value:9.021},{date:'2019-02-01',value:8.996},{date:'2019-03-01',value:8.972},
-  {date:'2019-04-01',value:8.947},{date:'2019-05-01',value:8.924},{date:'2019-06-01',value:8.900},
-  {date:'2019-07-01',value:8.877},{date:'2019-08-01',value:8.855},{date:'2019-09-01',value:8.833},
-  {date:'2019-10-01',value:8.810},{date:'2019-11-01',value:8.790},{date:'2019-12-01',value:8.769},
-  {date:'2020-01-01',value:8.749},{date:'2020-02-01',value:8.730},{date:'2020-03-01',value:8.710},
-  {date:'2020-04-01',value:8.691},{date:'2020-05-01',value:8.674},{date:'2020-06-01',value:8.657},
-  {date:'2020-07-01',value:8.639},{date:'2020-08-01',value:8.624},{date:'2020-09-01',value:8.608},
-  {date:'2020-10-01',value:8.592},{date:'2020-11-01',value:8.578},{date:'2020-12-01',value:8.564},
-  {date:'2021-01-01',value:8.550},{date:'2021-02-01',value:8.538},{date:'2021-03-01',value:8.525},
-  {date:'2021-04-01',value:8.513},{date:'2021-05-01',value:8.502},{date:'2021-06-01',value:8.491},
-  {date:'2021-07-01',value:8.480},{date:'2021-08-01',value:8.470},{date:'2021-09-01',value:8.461},
-  {date:'2021-10-01',value:8.451},{date:'2021-11-01',value:8.443},{date:'2021-12-01',value:8.434},
-  {date:'2022-01-01',value:8.426},{date:'2022-02-01',value:8.419},{date:'2022-03-01',value:8.412},
-  {date:'2022-04-01',value:8.405},{date:'2022-05-01',value:8.398},{date:'2022-06-01',value:8.392},
-  {date:'2022-07-01',value:8.386},{date:'2022-08-01',value:8.381},{date:'2022-09-01',value:8.376},
-  {date:'2022-10-01',value:8.371},{date:'2022-11-01',value:8.366},{date:'2022-12-01',value:8.362},
-  {date:'2023-01-01',value:8.357},{date:'2023-02-01',value:8.354},{date:'2023-03-01',value:8.350},
-  {date:'2023-04-01',value:8.346},{date:'2023-05-01',value:8.343},{date:'2023-06-01',value:8.340},
-  {date:'2023-07-01',value:8.337},{date:'2023-08-01',value:8.335},{date:'2023-09-01',value:8.332},
-  {date:'2023-10-01',value:8.329},{date:'2023-11-01',value:8.327},{date:'2023-12-01',value:8.325},
-  {date:'2024-01-01',value:8.323},{date:'2024-02-01',value:8.321},{date:'2024-03-01',value:8.320},
-  {date:'2024-04-01',value:8.318},{date:'2024-05-01',value:8.317},{date:'2024-06-01',value:8.315},
-  {date:'2024-07-01',value:8.314},{date:'2024-08-01',value:8.313},{date:'2024-09-01',value:8.311},
-  {date:'2024-10-01',value:8.310},{date:'2024-11-01',value:8.309},{date:'2024-12-01',value:8.309},
-  {date:'2025-01-01',value:8.308},{date:'2025-02-01',value:8.307},{date:'2025-03-01',value:8.306},
-  {date:'2025-04-01',value:8.305},{date:'2025-05-01',value:8.305},{date:'2025-06-01',value:8.304},
-  {date:'2025-07-01',value:8.304},{date:'2025-08-01',value:8.303},{date:'2025-09-01',value:8.303},
-  {date:'2025-10-01',value:8.302},{date:'2025-11-01',value:8.302},{date:'2025-12-01',value:8.301},
-  {date:'2026-01-01',value:8.301},{date:'2026-02-01',value:8.300},
+  {date:'2017-01-01',value:9.838},{date:'2017-02-01',value:9.835},{date:'2017-03-01',value:9.831},
+  {date:'2017-04-01',value:9.828},{date:'2017-05-01',value:9.823},{date:'2017-06-01',value:9.818},
+  {date:'2017-07-01',value:9.813},{date:'2017-08-01',value:9.807},{date:'2017-09-01',value:9.800},
+  {date:'2017-10-01',value:9.794},{date:'2017-11-01',value:9.785},{date:'2017-12-01',value:9.777},
+  {date:'2018-01-01',value:9.768},{date:'2018-02-01',value:9.757},{date:'2018-03-01',value:9.747},
+  {date:'2018-04-01',value:9.736},{date:'2018-05-01',value:9.723},{date:'2018-06-01',value:9.710},
+  {date:'2018-07-01',value:9.697},{date:'2018-08-01',value:9.681},{date:'2018-09-01',value:9.666},
+  {date:'2018-10-01',value:9.651},{date:'2018-11-01',value:9.633},{date:'2018-12-01',value:9.615},
+  {date:'2019-01-01',value:9.598},{date:'2019-02-01',value:9.578},{date:'2019-03-01',value:9.558},
+  {date:'2019-04-01',value:9.538},{date:'2019-05-01',value:9.516},{date:'2019-06-01',value:9.494},
+  {date:'2019-07-01',value:9.473},{date:'2019-08-01',value:9.449},{date:'2019-09-01',value:9.426},
+  {date:'2019-10-01',value:9.402},{date:'2019-11-01',value:9.378},{date:'2019-12-01',value:9.353},
+  {date:'2020-01-01',value:9.328},{date:'2020-02-01',value:9.303},{date:'2020-03-01',value:9.278},
+  {date:'2020-04-01',value:9.252},{date:'2020-05-01',value:9.226},{date:'2020-06-01',value:9.200},
+  {date:'2020-07-01',value:9.175},{date:'2020-08-01',value:9.149},{date:'2020-09-01',value:9.123},
+  {date:'2020-10-01',value:9.097},{date:'2020-11-01',value:9.072},{date:'2020-12-01',value:9.046},
+  {date:'2021-01-01',value:9.021},{date:'2021-02-01',value:8.996},{date:'2021-03-01',value:8.972},
+  {date:'2021-04-01',value:8.947},{date:'2021-05-01',value:8.924},{date:'2021-06-01',value:8.900},
+  {date:'2021-07-01',value:8.877},{date:'2021-08-01',value:8.855},{date:'2021-09-01',value:8.833},
+  {date:'2021-10-01',value:8.810},{date:'2021-11-01',value:8.790},{date:'2021-12-01',value:8.769},
+  {date:'2022-01-01',value:8.749},{date:'2022-02-01',value:8.730},{date:'2022-03-01',value:8.710},
+  {date:'2022-04-01',value:8.691},{date:'2022-05-01',value:8.674},{date:'2022-06-01',value:8.657},
+  {date:'2022-07-01',value:8.639},{date:'2022-08-01',value:8.624},{date:'2022-09-01',value:8.608},
+  {date:'2022-10-01',value:8.592},{date:'2022-11-01',value:8.578},{date:'2022-12-01',value:8.564},
+  {date:'2023-01-01',value:8.550},{date:'2023-02-01',value:8.538},{date:'2023-03-01',value:8.525},
+  {date:'2023-04-01',value:8.513},{date:'2023-05-01',value:8.502},{date:'2023-06-01',value:8.491},
+  {date:'2023-07-01',value:8.480},{date:'2023-08-01',value:8.470},{date:'2023-09-01',value:8.461},
+  {date:'2023-10-01',value:8.451},{date:'2023-11-01',value:8.443},{date:'2023-12-01',value:8.434},
+  {date:'2024-01-01',value:8.426},{date:'2024-02-01',value:8.419},{date:'2024-03-01',value:8.412},
+  {date:'2024-04-01',value:8.405},{date:'2024-05-01',value:8.398},{date:'2024-06-01',value:8.392},
+  {date:'2024-07-01',value:8.386},{date:'2024-08-01',value:8.381},{date:'2024-09-01',value:8.376},
+  {date:'2024-10-01',value:8.371},{date:'2024-11-01',value:8.366},{date:'2024-12-01',value:8.362},
+  {date:'2025-01-01',value:8.357},{date:'2025-02-01',value:8.354},{date:'2025-03-01',value:8.350},
+  {date:'2025-04-01',value:8.346},{date:'2025-05-01',value:8.343},{date:'2025-06-01',value:8.340},
+  {date:'2025-07-01',value:8.337},{date:'2025-08-01',value:8.335},{date:'2025-09-01',value:8.332},
+  {date:'2025-10-01',value:8.329},{date:'2025-11-01',value:8.327},{date:'2025-12-01',value:8.325},
+  {date:'2026-01-01',value:8.323},{date:'2026-02-01',value:8.321},{date:'2026-03-01',value:8.320},
 ]
 
 interface LaborData {
@@ -252,11 +244,11 @@ export function LaborDashboard({ data }: Props) {
           <MacroChart
             allData={empIndicesData}
             series={[
-              { key: 'serv',   label: 'Serviços',           color: 'var(--chart-1)' },
-              { key: 'com',    label: 'Comércio',           color: 'var(--chart-2)' },
-              { key: 'ind',    label: 'Ind. Transformação', color: 'var(--chart-3)' },
-              { key: 'constr', label: 'Construção Civil',   color: 'var(--chart-4)' },
-              { key: 'agro',   label: 'Agropecuária',       color: 'var(--chart-5)' },
+              { key: 'serv',   label: 'Serviços',                   color: 'var(--chart-1)' },
+              { key: 'com',    label: 'Comércio',                   color: 'var(--chart-2)' },
+              { key: 'ind',    label: 'Indústria de Transformação', color: 'var(--chart-3)' },
+              { key: 'constr', label: 'Construção Civil',           color: 'var(--chart-4)' },
+              { key: 'agro',   label: 'Agropecuária',               color: 'var(--chart-5)' },
             ]}
             unit="" height={280} effectiveRange={range}
           />
@@ -269,8 +261,8 @@ export function LaborDashboard({ data }: Props) {
             <MacroChart
               allData={mergeByDate({ ind: data.empInd, constr: data.empConstr })}
               series={[
-                { key: 'ind',    label: 'Ind. Transformação', color: 'var(--chart-3)' },
-                { key: 'constr', label: 'Construção Civil',   color: 'var(--chart-4)' },
+                { key: 'ind',    label: 'Indústria de Transformação', color: 'var(--chart-3)' },
+                { key: 'constr', label: 'Construção Civil',           color: 'var(--chart-4)' },
               ]}
               unit="" height={240} effectiveRange={range}
             />
