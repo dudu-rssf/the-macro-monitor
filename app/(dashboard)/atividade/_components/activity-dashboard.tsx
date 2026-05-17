@@ -21,7 +21,6 @@ interface ActivityData {
   pibNsa:   SeriesPoint[]
   pibSa:    SeriesPoint[]
   pibNom:   SeriesPoint[]
-  pibGap:   { date: string; value: number }[]
   pibGrowth: { date: string; value: number }[]
   // VAB Setorial
   vabAgro:       SeriesPoint[]
@@ -155,7 +154,7 @@ export function ActivityDashboard({ data }: Props) {
       </div>
 
       {/* ── SEÇÃO: VISÃO GERAL ───────────────────────────── */}
-      <SectionDivider title="Visão Geral" description="IBC-Br e PIB — nível, variações e hiato do produto" />
+      <SectionDivider title="Visão Geral" description="IBC-Br e PIB — nível e variações" />
 
       <SectionCard title="IBC-Br — nível mensal (índice, proxy do PIB)" sectionId="ibc-nivel" {...sectionProps}>
         {(range) => (
@@ -218,17 +217,6 @@ export function ActivityDashboard({ data }: Props) {
           )}
         </SectionCard>
       </div>
-
-      <SectionCard title="Hiato do Produto — desvio do PIB em relação ao potencial (HP filter, % )" sectionId="pib-gap" {...sectionProps}>
-        {(range) => (
-          <MacroChart
-            allData={data.pibGap}
-            series={[{ key: 'value', label: 'Hiato do PIB', color: 'var(--chart-2)' }]}
-            referenceLines={[{ value: 0, label: 'potencial', color: 'var(--muted-foreground)' }]}
-            unit="%" height={240} chartType="bar" effectiveRange={range}
-          />
-        )}
-      </SectionCard>
 
       {/* ── SEÇÃO: VAB POR SETOR ─────────────────────────── */}
       <SectionDivider title="VAB por Setor" description="Valor Adicionado Bruto — Agropecuária, Indústria e Serviços (trimestral, índice encadeado)" />

@@ -1,7 +1,6 @@
 export const dynamic = 'force-dynamic'
 
 import { getSeriesHistoryFrom, getSeriesLatestTwo } from '@/db/queries'
-import { hpGap } from '@/lib/hp-filter'
 import { ActivityDashboard } from './_components/activity-dashboard'
 import type { SeriesPoint } from '@/components/macro/types'
 
@@ -81,12 +80,6 @@ export default async function AtividadePage() {
     getSeriesHistoryFrom('20787', FROM),
   ])
 
-  // Hiato do PIB via HP filter (λ=1600, dados trimestrais SA)
-  const pibSaPts = pibSaH?.data ?? []
-  const pibSaSorted = [...pibSaPts].sort((a, b) => a.date.localeCompare(b.date))
-  const pibGapValues = hpGap(pibSaSorted.map((p) => p.value))
-  const pibGap = pibSaSorted.map((p, i) => ({ date: p.date, value: pibGapValues[i] }))
-
   // Crescimento anual (YoY, %) trimestral
   const pibGrowth  = yoyGrowth(pibSaH?.data ?? [])
   const agroGrowth = yoyGrowth(vabAgroH?.data ?? [])
@@ -104,7 +97,6 @@ export default async function AtividadePage() {
         pibNsa:    pibNsaH?.data   ?? [],
         pibSa:     pibSaH?.data    ?? [],
         pibNom:    pibNomH?.data   ?? [],
-        pibGap,
         pibGrowth,
         vabAgro:       vabAgroH?.data ?? [],
         vabInd:        vabIndH?.data  ?? [],
