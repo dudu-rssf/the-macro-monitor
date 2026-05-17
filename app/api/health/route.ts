@@ -43,11 +43,11 @@ export async function GET() {
       const p = new URLSearchParams({
         '$format': 'json',
         '$top':    '1',
-        '$select': 'Indicador,Data,Mediana',
-        '$filter': "Indicador eq 'IPCA'",
+        '$select': 'Indicador,Mediana',
+        '$filter': "Indicador eq 'IPCA' and baseCalculo eq 0",
       })
       const res = await fetch(
-        `https://olinda.bcb.gov.br/olinda/servico/Expectativas/versao/v1/odata/ExpectativasMercadoAnuais?${p.toString()}`,
+        `https://olinda.bcb.gov.br/olinda/servico/Expectativas/versao/v1/odata/ExpectativaMercadoMensais?${p.toString()}`,
         { signal: AbortSignal.timeout(10_000) }
       )
       if (!res.ok) throw new Error(`HTTP ${res.status}`)

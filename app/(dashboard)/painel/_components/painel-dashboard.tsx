@@ -37,7 +37,7 @@ function ServiceRow({ svc }: { svc: ServiceStatus }) {
           {svc.detail}
         </span>
       )}
-      <span className={`text-[11px] font-mono shrink-0 ${latencyColor(svc.latencyMs)}`}>
+      <span className={`text-[11px] font-mono shrink-0 ${svc.ok ? latencyColor(svc.latencyMs) : 'text-muted-foreground/60'}`}>
         {svc.latencyMs !== null ? `${svc.latencyMs}ms` : '—'}
       </span>
     </div>
