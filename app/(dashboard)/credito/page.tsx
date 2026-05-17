@@ -1,7 +1,8 @@
-export const dynamic = 'force-dynamic'
+﻿export const dynamic = 'force-dynamic'
 
 import { getSeriesHistoryFrom, getSeriesLatestTwo } from '@/db/queries'
 import { CreditDashboard } from './_components/credit-dashboard'
+import { TabAiSummary } from '@/components/macro/tab-ai-summary'
 
 const FROM = new Date('2003-01-01')
 
@@ -34,6 +35,7 @@ export default async function CreditoPage() {
   ])
 
   return (
+    <>
     <CreditDashboard
       data={{
         totalKv, inadimKv, spreadKv, compRendaKv,
@@ -51,5 +53,7 @@ export default async function CreditoPage() {
         endividamento: endividamentoH?.data ?? [],
       }}
     />
+    <TabAiSummary tab="credito" />
+  </>
   )
 }

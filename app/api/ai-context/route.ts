@@ -8,8 +8,8 @@ function v(n: number | null | undefined, dec = 2): string {
 }
 
 export async function GET() {
-  if (!process.env.GROQ_API_KEY) {
-    return NextResponse.json({ bullets: [], generatedAt: null, error: 'GROQ_API_KEY não configurada no servidor.' })
+  if (!process.env.GEMINI_API_KEY) {
+    return NextResponse.json({ bullets: [], generatedAt: null, error: 'GEMINI_API_KEY não configurada no servidor.' })
   }
 
   try {
@@ -56,14 +56,14 @@ Regras:
 Dados mais recentes:
 ${contexto}`
 
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        Authorization: `Bearer ${process.env.GEMINI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'gemini-2.0-flash',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.3,
         max_tokens: 700,
@@ -73,7 +73,7 @@ ${contexto}`
 
     if (!res.ok) {
       const errBody = await res.text().catch(() => '')
-      return NextResponse.json({ bullets: [], generatedAt: null, error: `Groq HTTP ${res.status}: ${errBody.slice(0, 120)}` })
+      return NextResponse.json({ bullets: [], generatedAt: null, error: `API error ${res.status}: ${errBody.slice(0, 120)}` })
     }
 
     const data = await res.json()

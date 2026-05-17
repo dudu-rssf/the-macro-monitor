@@ -1,7 +1,8 @@
-export const dynamic = 'force-dynamic'
+﻿export const dynamic = 'force-dynamic'
 
 import { getSeriesHistoryFrom, getSeriesLatestTwo } from '@/db/queries'
 import { ActivityDashboard } from './_components/activity-dashboard'
+import { TabAiSummary } from '@/components/macro/tab-ai-summary'
 import type { SeriesPoint } from '@/components/macro/types'
 
 const FROM = new Date('2001-01-01')
@@ -87,6 +88,7 @@ export default async function AtividadePage() {
   const servGrowth = yoyGrowth(vabServH?.data ?? [])
 
   return (
+    <>
     <ActivityDashboard
       data={{
         ibcVarMKv, ibcVar12Kv, varejoKv, iccKv,
@@ -127,5 +129,7 @@ export default async function AtividadePage() {
         spreadPj:  spreadPjH?.data  ?? [],
       }}
     />
+    <TabAiSummary tab="atividade" />
+  </>
   )
 }

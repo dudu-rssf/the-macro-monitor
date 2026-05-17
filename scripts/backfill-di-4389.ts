@@ -21,13 +21,21 @@ async function main() {
 
   console.log(`Fetching 4389 from ${START.toISOString().slice(0,10)} to ${END.toISOString().slice(0,10)}…`)
   const raw = await fetchBCB('4389', START, END)
-  let inserted = 0
-  for (const r of raw) {
+  const rows = raw.map((r) => {
     const [d, m, y] = r.data.split('/')
-    await db.insert(macroSeriesData).values({ seriesId: meta.id, date: `${y}-${m}-${d}`, value: r.valor }).onConflictDoNothing()
-    inserted++
+    return { seriesId: meta.id, date: `${y}-${m}-${d}`, value: r.valor }
+  })
+
+  // Batch insert em grupos de 200 para evitar timeout
+  const BATCH = 200
+  let inserted = 0
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const batch = rows.slice(i, i + BATCH)
+    await db.insert(macroSeriesData).values(batch).onConflictDoNothing()
+    inserted += batch.length
+    process.stdout.write(`\r  ${inserted}/${rows.length}`)
   }
-  console.log(`Done: ${inserted} rows`)
+  console.log(`\nDone: ${inserted} rows`)
   process.exit(0)
 }
 main().catch((e) => { console.error(e); process.exit(1) })

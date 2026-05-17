@@ -6,25 +6,31 @@ import type { NewsItem, NewsCategory } from '@/lib/rss'
 type Filter = 'tudo' | NewsCategory
 
 const FILTERS: { key: Filter; label: string }[] = [
-  { key: 'tudo',          label: 'Tudo'         },
-  { key: 'macro-brasil',  label: 'Macro Brasil' },
-  { key: 'macro-global',  label: 'Macro Global' },
-  { key: 'geopolitica',   label: 'Geopolítica'  },
-  { key: 'resultados',    label: 'Resultados'   },
+  { key: 'tudo',            label: 'Tudo'           },
+  { key: 'macro-brasil',    label: 'Macro Brasil'   },
+  { key: 'macro-global',    label: 'Macro Global'   },
+  { key: 'geopolitica',     label: 'Geopolítica'    },
+  { key: 'politica-brasil', label: 'Política BR'    },
+  { key: 'negocios-brasil', label: 'Negócios BR'    },
+  { key: 'resultados',      label: 'Resultados'     },
 ]
 
 const CATEGORY_COLOR: Record<NewsCategory, string> = {
-  'macro-brasil': 'bg-blue-500/15 text-blue-400',
-  'macro-global': 'bg-amber-500/15 text-amber-400',
-  'geopolitica':  'bg-red-500/15 text-red-400',
-  'resultados':   'bg-emerald-500/15 text-emerald-400',
+  'macro-brasil':    'bg-blue-500/15 text-blue-400',
+  'macro-global':    'bg-amber-500/15 text-amber-400',
+  'geopolitica':     'bg-red-500/15 text-red-400',
+  'politica-brasil': 'bg-yellow-500/15 text-yellow-400',
+  'negocios-brasil': 'bg-cyan-500/15 text-cyan-400',
+  'resultados':      'bg-emerald-500/15 text-emerald-400',
 }
 
 const CATEGORY_LABEL: Record<NewsCategory, string> = {
-  'macro-brasil': 'Macro BR',
-  'macro-global': 'Global',
-  'geopolitica':  'Geopolítica',
-  'resultados':   'Resultados',
+  'macro-brasil':    'Macro BR',
+  'macro-global':    'Global',
+  'geopolitica':     'Geopolítica',
+  'politica-brasil': 'Política BR',
+  'negocios-brasil': 'Negócios BR',
+  'resultados':      'Resultados',
 }
 
 function todayBRT(): string {

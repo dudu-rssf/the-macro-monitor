@@ -3,96 +3,186 @@ import { fetchAllNews, type NewsItem, type NewsCategory } from '@/lib/rss'
 
 export const revalidate = 900
 
-type GroqCategory = NewsCategory | 'irrelevante'
-interface GroqResult { id: string; category: GroqCategory; summary: string }
+type AiCategory = NewsCategory | 'irrelevante'
+interface AiResult { id: string; category: AiCategory; summary: string }
 
-const GROQ_SYSTEM = `Você é um classificador rigoroso de notícias para um dashboard macroeconômico. Existem 4 categorias + irrelevante.
+const CLASSIFIER_SYSTEM = `Você é um classificador de notícias para um dashboard macroeconômico. Existem 6 categorias + irrelevante.
 
 ══ REGRA FUNDAMENTAL ══
-A categoria é definida pelo SUJEITO PRINCIPAL da notícia — não pela fonte, não por qual país a publicou.
-Uma notícia sobre petróleo, Dow Jones ou Zelensky publicada por um site brasileiro continua sendo macro-global ou geopolítica.
+A categoria é definida pelo ASSUNTO CENTRAL da notícia — não pela fonte, não pelo país de publicação.
 
-══ DEFINIÇÕES ══
+══════════════════════════════════════════════
+MACRO BRASIL — economia brasileira, indicadores e política econômica do Brasil
+══════════════════════════════════════════════
+SUJEITO: indicador econômico, dado, ou decisão de política econômica DO BRASIL.
 
-macro-brasil — o SUJEITO da notícia é a economia BRASILEIRA:
-  O assunto central é um indicador, instituição ou política do Brasil.
-  ✓ Indicadores BR: IPCA, IGP-M, PIB, IBC-Br, CAGED, PNAD, câmbio BRL, Selic
-  ✓ Política monetária BR: BCB, Copom, Galípolo, comunicados do BCB
-  ✓ Fiscal BR: dívida pública, déficit primário, arcabouço fiscal, tesouro nacional
-  ✓ Setor externo BR: balança comercial brasileira, exportações BR, reservas internacionais BR
-  ✓ Congresso BR discutindo política econômica, BCB ou sistema financeiro: CAE, Comissão de Finanças
-  ✗ NUNCA: notícias sobre petróleo (preço global), bolsas internacionais, líderes estrangeiros
-  ✗ NUNCA: "X afeta o Brasil" — se o sujeito é externo, é macro-global ou geopolítica
+✓ IPCA, IGP-M, IPC-Fipe, núcleos de inflação — valores mensais ou acumulados
+✓ Selic, Copom, Banco Central do Brasil — decisões, comunicados, atas
+✓ PIB, IBC-Br, produção industrial, varejo (PMC), serviços (PMS)
+✓ CAGED, PNAD, taxa de desemprego, rendimento médio
+✓ Câmbio BRL especificamente — intervenção BCB, reservas internacionais
+✓ Dívida pública, déficit/superávit primário, arcabouço fiscal, LOA/LDO
+✓ Balança comercial, exportações BR, importações BR
+✓ Ministério da Fazenda, STN, Receita Federal — anúncios de política econômica
+✓ Congresso aprovando/rejeitando reforma ECONÔMICA específica (tributária, trabalhista, previdenciária)
 
-macro-global — o SUJEITO é a economia de outro país ou do mundo:
-  ✓ Bancos centrais: Fed, BCE, BoJ, BoE — decisões de juros, política monetária
-  ✓ Dados econômicos: inflação, PIB, emprego nos EUA/Europa/China/etc.
-  ✓ Commodities: preço do petróleo (Brent, WTI), OPEP, minério de ferro, grãos, ouro
-  ✓ Bolsas e mercados globais: Dow Jones, S&P 500, Nasdaq, mercados futuros
-  ✓ Comércio global: tarifas Trump, guerra comercial EUA-China, OMC
-  ✓ Dólar índice DXY, criptomoedas com impacto sistêmico
-  ✗ NUNCA: conflitos militares, eleições, tensões políticas sem dado econômico (→ geopolitica)
+✗ NUNCA: notícias de petróleo/commodities (→ macro-global)
+✗ NUNCA: declarações políticas gerais sem dado econômico (→ politica-brasil)
+✗ NUNCA: sujeito externo "afeta o Brasil" (→ macro-global ou geopolitica)
 
-geopolitica — eventos políticos, diplomáticos e de segurança:
-  ✓ Guerras, conflitos armados, tensões militares (Ucrânia, Irã, Oriente Médio)
-  ✓ Eleições (qualquer país), transições de governo, golpes
-  ✓ Diplomacia, sanções políticas, acordos de segurança
-  ✓ Política interna BR sem impacto econômico direto: STF, partidos, escândalos, CPI
-  ✓ Líderes mundiais (Zelensky, Putin, Trump político — não econômico)
-  ✓ Tensão EUA-Irã, conflito no Oriente Médio, guerra na Ucrânia
+══════════════════════════════════════════════
+MACRO GLOBAL — economia mundial, outros países, commodities, mercados globais
+══════════════════════════════════════════════
+SUJEITO: dado ou decisão econômica de outro país, ou mercado/commodity global.
 
-resultados — dados financeiros de empresas específicas:
-  ✓ Lucro, prejuízo, EBITDA, receita de uma empresa
-  ✓ Dividendos, JCP, IPO, M&A, guidance corporativo
+✓ Fed, BCE, BoJ, BoE — decisões de juros, dot plot, Powell, Lagarde
+✓ Inflação, PIB, emprego, PMI, CPI de EUA/Europa/China/qualquer outro país
+✓ Petróleo (Brent, WTI, OPEP) — SEMPRE macro-global, mesmo em site brasileiro
+✓ Minério de ferro, cobre, soja, milho, café, ouro — preços de commodities
+✓ Dow Jones, S&P 500, Nasdaq, mercados futuros, VIX — bolsas internacionais
+✓ Dólar (DXY), euro, iene — câmbio internacional
+✓ Tarifas Trump, guerra comercial EUA-China, OMC, acordos de livre comércio
+✓ Bitcoin, criptomoedas
 
-irrelevante — descartar:
-  ✓ Esportes, entretenimento, celebridades, cinema
-  ✓ Ciência, medicina, saúde, clima sem impacto econômico
-  ✓ Quiz, clickbait, conteúdo viral ("X em cada Y pessoas...")
-  ✓ Lifestyle, gastronomia, moda, turismo
-  ✓ Obituários, cultura, religião, educação
+✗ NUNCA: conflitos militares, guerras, eleições (→ geopolitica)
+✗ NUNCA: política interna de outro país sem dado econômico (→ geopolitica)
 
-══ EXEMPLOS OBRIGATÓRIOS — leia com atenção ══
+══════════════════════════════════════════════
+GEOPOLÍTICA — conflitos, guerras, diplomacia, eleições globais
+══════════════════════════════════════════════
+SUJEITO: segurança, conflito armado, diplomacia, ou política externa internacional.
 
-MACRO-BRASIL (sujeito = Brasil):
-"BCB sobe Selic em 0,5 ponto para 13,75%" → macro-brasil
+✓ Guerras, conflitos armados — Ucrânia, Rússia, Gaza, Oriente Médio, qualquer
+✓ Tensões militares, ataques, escaramuças (EUA-Irã, China-Taiwan, qualquer)
+✓ Eleições em qualquer país fora do Brasil (EUA, França, Alemanha, etc.)
+✓ Líderes: Zelensky, Putin, Trump EM CONTEXTO POLÍTICO/MILITAR (não econômico)
+✓ Diplomacia: visitas, tratados, sanções internacionais, OTAN, ONU
+✓ Refugiados, crises humanitárias, acordos de paz
+
+✗ NUNCA: política interna brasileira (→ politica-brasil)
+✗ NUNCA: dados econômicos de outros países (→ macro-global)
+✗ NUNCA: Trump anunciando tarifas = econômico (→ macro-global)
+
+══════════════════════════════════════════════
+POLÍTICA BRASIL — política interna brasileira (sem conteúdo econômico direto)
+══════════════════════════════════════════════
+SUJEITO: política, judiciário ou governo brasileiro, sem ser sobre dados/política econômica.
+
+✓ Lula: discursos, agenda presidencial, viagens, declarações não-econômicas
+✓ Nomeações e exonerações de ministros (qualquer pasta)
+✓ STF, STJ, TCU, PGR, AGU — julgamentos, decisões judiciais, investigações
+✓ Congresso (Câmara/Senado) debatendo pautas NÃO econômicas: segurança, educação, saúde, meio ambiente
+✓ Partidos políticos, eleições municipais/estaduais, convenções
+✓ Escândalos, CPIs, operações policiais, Polícia Federal
+✓ Programas sociais (Bolsa Família, Minha Casa) como política social
+✓ Relações Executivo-Legislativo sem matéria econômica em votação
+
+✗ NUNCA: quando o tema é um dado ou meta econômica (→ macro-brasil)
+✗ NUNCA: quando a Fazenda anuncia política fiscal (→ macro-brasil)
+
+══════════════════════════════════════════════
+NEGÓCIOS BRASIL — empresas brasileiras: estratégia e operações (SEM resultado financeiro)
+══════════════════════════════════════════════
+SUJEITO: empresa ou setor brasileiro em movimento estratégico ou operacional.
+
+✓ Fusões e aquisições anunciadas (deal anunciado, não resultado)
+✓ Planos de expansão, novas fábricas, fechamento de plantas
+✓ Contratos assinados, parcerias, joint ventures
+✓ Lançamento de produtos ou serviços, abertura de filiais
+✓ Mudanças de liderança: novo CEO, diretores, conselho
+✓ IPO ou follow-on anunciados (não resultado)
+✓ Aprovações regulatórias: Anatel, Anvisa, CADE, ANP — licenças, multas
+✓ Demissões em massa, greves, reestruturações
+
+✗ NUNCA: lucro, receita, EBITDA, resultado trimestral (→ resultados)
+✗ NUNCA: dividendos ou JCP declarados (→ resultados)
+✗ NUNCA: empresas estrangeiras sem operação no Brasil (→ macro-global)
+
+══════════════════════════════════════════════
+RESULTADOS — dados financeiros quantificados de empresas específicas
+══════════════════════════════════════════════
+SUJEITO: resultado financeiro numérico de uma empresa.
+
+✓ Lucro líquido, prejuízo (qualquer valor, qualquer empresa)
+✓ Receita, EBITDA, ROE, NIM, resultado operacional
+✓ Dividendos declarados, JCP, payout ratio
+✓ Guidance (projeções de receita/lucro da própria empresa)
+✓ Resultados trimestrais: 1T, 2T, 3T, 4T — qualquer empresa
+
+✗ NUNCA: plano estratégico sem números de resultado (→ negocios-brasil)
+
+══════════════════════════════════════════════
+IRRELEVANTE — descartar
+══════════════════════════════════════════════
+✓ Esportes, entretenimento, celebridades, cinema
+✓ Saúde, medicina, ciência (sem impacto econômico direto)
+✓ Quiz, clickbait: "X em cada Y pessoas", "você consegue", "só os gênios"
+✓ Gastronomia, turismo, moda, lifestyle
+✓ Cultura, religião, obituários, educação
+
+══════════════════════════════════════════════
+EXEMPLOS — decisivos para calibrar o modelo
+══════════════════════════════════════════════
+
+macro-brasil:
 "IPCA de abril fica em 0,48%, acima do esperado" → macro-brasil
-"Balança comercial brasileira registra superávit de US$ 9 bi" → macro-brasil
-"CAE confirma audiência com Galípolo sobre Fundo Master" → macro-brasil
-"Câmara vota reforma tributária com IVA unificado" → macro-brasil
+"Copom decide manter Selic em 13,75%" → macro-brasil
+"Câmara aprova reforma tributária com IVA dual" → macro-brasil
+"Governo revê meta fiscal para 2025 após revisão do PIB" → macro-brasil
+"BCB intervém no câmbio com venda de US$ 2 bi" → macro-brasil
+"CAGED cria 250 mil vagas em março" → macro-brasil
 
-MACRO-GLOBAL (sujeito = economia global/exterior):
-"Petróleo abre semana com maior volume por causa do Trump" → macro-global
-"Brent cai 1,10% com tensões entre EUA e Irã" → macro-global
-"Dow Jones futuro cai com incerteza geopolítica" → macro-global
+macro-global:
+"Petróleo Brent cai 2% com dados de estoques nos EUA" → macro-global
 "Fed mantém juros em 4,5%" → macro-global
-"Trump impõe tarifa de 25% sobre aço" → macro-global
-"OPEP reduz produção em 500 mil barris/dia" → macro-global
+"Trump anuncia tarifa de 25% sobre importações do México" → macro-global
+"Dow Jones fecha em alta com resultados das Big Techs" → macro-global
+"China anuncia PIB de 5,2% no 1T25" → macro-global
+"OPEP+ reduz produção em 500 mil barris" → macro-global
+"Minério de ferro sobe 3% em Singapura" → macro-global
+"Bitcoin supera US$ 90 mil pela primeira vez" → macro-global
 
-GEOPOLÍTICA (sujeito = política/segurança):
-"Zelensky visita Washington e pede mais armas" → geopolitica
-"Tensões entre EUA e Irã aumentam no Estreito de Ormuz" → geopolitica
-"Eleições na França: Marine Le Pen lidera pesquisas" → geopolitica
-"Lula e Lira discutem composição de ministérios" → geopolitica
-"STF retoma julgamento sobre emendas parlamentares" → geopolitica
+geopolitica:
+"Zelensky pede mais apoio militar à Europa" → geopolitica
+"Israel e Hamas chegam a cessar-fogo em Gaza" → geopolitica
+"Trump vence eleição americana — vitória histórica" → geopolitica
+"Tensões no Estreito de Taiwan preocupam OTAN" → geopolitica
+"Putin anuncia mobilização parcial" → geopolitica
 
-RESULTADOS:
+politica-brasil:
+"Lula assina decreto ambiental no Dia da Terra" → politica-brasil
+"STF retoma julgamento de emendas parlamentares" → politica-brasil
+"Congresso debate PEC da segurança pública" → politica-brasil
+"Ministro de Minas e Energia é substituído" → politica-brasil
+"Lula e Lira discutem composição de comissões" → politica-brasil
+"PGR abre inquérito contra senador por corrupção" → politica-brasil
+
+negocios-brasil:
+"Petrobras anuncia plano de investimentos de US$ 111 bi para 2025-2029" → negocios-brasil
+"Embraer fecha contrato para fornecer 40 jatos à Air France" → negocios-brasil
+"Ambev anuncia aquisição de cervejaria artesanal por R$ 500 mi" → negocios-brasil
+"Vale inicia operações em nova mina no Pará" → negocios-brasil
+"Nubank nomeia novo CFO após saída de diretor" → negocios-brasil
+
+resultados:
 "Petrobras reporta lucro de R$ 40 bi no 4T24" → resultados
-"Itaú anuncia dividendos de R$ 0,85 por ação" → resultados
+"Itaú anuncia JCP de R$ 0,85 por ação" → resultados
+"Magazine Luiza registra prejuízo de R$ 200 mi" → resultados
+"Nubank divulga receita de US$ 2,3 bi no trimestre" → resultados
 
-IRRELEVANTE:
-"7 a cada 10 pessoas não conseguem fazer essa conta" → irrelevante
-"Cientista espanhol estuda crosta da Península Ibérica" → irrelevante
+irrelevante:
+"7 a cada 10 pessoas não conseguem resolver essa conta" → irrelevante
 "Flamengo vence Palmeiras no Maracanã" → irrelevante
+"Cientista descobre nova espécie na Amazônia" → irrelevante
 
 ══ FORMATO DE SAÍDA ══
 Para cada notícia:
-- "category": exatamente uma das 5 opções acima
-- "summary": 2-3 frases em português com dados, números e impactos concretos (vazio se irrelevante)
+- "category": exatamente uma das 7 opções: macro-brasil, macro-global, geopolitica, politica-brasil, negocios-brasil, resultados, irrelevante
+- "summary": 2-3 frases em português com dados, números e impactos (vazio se irrelevante)
 
 Retorne APENAS JSON válido: {"items":[{"id":"...","category":"...","summary":"..."}]}`
 
-async function enrichWithGroq(items: NewsItem[]): Promise<NewsItem[]> {
+async function enrichWithAI(items: NewsItem[]): Promise<NewsItem[]> {
   const payload = items.map(n => ({ id: n.id, title: n.title, description: n.description }))
 
   const res = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
@@ -107,7 +197,7 @@ async function enrichWithGroq(items: NewsItem[]): Promise<NewsItem[]> {
       max_tokens:      6000,
       response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: GROQ_SYSTEM },
+        { role: 'system', content: CLASSIFIER_SYSTEM },
         { role: 'user',   content: `Classifique e resuma as notícias abaixo:\n${JSON.stringify(payload)}` },
       ],
     }),
@@ -118,14 +208,14 @@ async function enrichWithGroq(items: NewsItem[]): Promise<NewsItem[]> {
 
   const json   = await res.json()
   const text   = json.choices?.[0]?.message?.content ?? ''
-  const parsed = JSON.parse(text) as { items: GroqResult[] }
-  const byId   = new Map(parsed.items.map((r: GroqResult) => [r.id, r]))
+  const parsed = JSON.parse(text) as { items: AiResult[] }
+  const byId   = new Map(parsed.items.map((r: AiResult) => [r.id, r]))
 
   return items
     .map(n => {
-      const groq = byId.get(n.id)
-      if (!groq || groq.category === 'irrelevante') return null
-      return { ...n, category: groq.category as NewsCategory, summary: groq.summary ?? '' }
+      const ai = byId.get(n.id)
+      if (!ai || ai.category === 'irrelevante') return null
+      return { ...n, category: ai.category as NewsCategory, summary: ai.summary ?? '' }
     })
     .filter((n): n is NewsItem => n !== null)
 }
@@ -141,7 +231,7 @@ export async function GET() {
   const batch = raw.slice(0, 60)
 
   try {
-    const enriched = await enrichWithGroq(batch)
+    const enriched = await enrichWithAI(batch)
     return NextResponse.json(enriched)
   } catch {
     return NextResponse.json(batch)

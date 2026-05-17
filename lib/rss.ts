@@ -2,6 +2,8 @@ export type NewsCategory =
   | 'macro-brasil'
   | 'macro-global'
   | 'geopolitica'
+  | 'politica-brasil'
+  | 'negocios-brasil'
   | 'resultados'
 
 export interface NewsItem {
