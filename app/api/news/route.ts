@@ -234,6 +234,6 @@ export async function GET() {
     const enriched = await enrichWithAI(batch)
     return NextResponse.json(enriched)
   } catch {
-    return NextResponse.json(batch)
+    return NextResponse.json([])
   }
 }
