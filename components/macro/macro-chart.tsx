@@ -51,11 +51,55 @@ function formatValue(value: number, unit: string) {
   return `${value.toFixed(2)}${unit}`
 }
 
+// Smart Y-axis domain: zoom in when values occupy top portion of the scale.
+// Rule: if all values ≥ 0 and min/max ≥ 0.65 → start near min (not at 0).
+// This prevents IBC-Br (90-120) from showing empty space below.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function computeYDomain(data: any[], seriesKeys: string[], refLineValues: number[], isBar: boolean): [number, number] | undefined {
+  const nums = data
+    .flatMap((row) => seriesKeys.map((k) => row[k]))
+    .filter((v): v is number => typeof v === 'number' && isFinite(v))
+
+  if (nums.length === 0) return undefined
+
+  const allNums = [...nums, ...refLineValues]
+  const raw_min = Math.min(...allNums)
+  const raw_max = Math.max(...allNums)
+  if (raw_max === raw_min) return undefined
+
+  // Bar charts always anchor at 0
+  if (isBar) {
+    return [Math.min(0, raw_min), raw_max * 1.05]
+  }
+
+  if (raw_min < 0) {
+    // negative values — pad both sides symmetrically
+    const pad = (raw_max - raw_min) * 0.08
+    return [raw_min - pad, raw_max + pad]
+  }
+
+  if (raw_min / raw_max >= 0.65) {
+    // tight positive range → zoom in with small margin
+    const pad = (raw_max - raw_min) * 0.15
+    return [Math.max(0, raw_min - pad), raw_max + pad]
+  }
+
+  // default: start at 0
+  return [0, raw_max * 1.05]
+}
+
 export function MacroChart({
   allData, series, referenceLines = [], unit = '%', height = 280,
   chartType = 'line', effectiveRange, xKey = 'date', xFormatter
 }: MacroChartProps) {
   const data = xKey === 'date' ? cutData(allData as { date: string }[], effectiveRange) : allData
+
+  const yDomain = computeYDomain(
+    data,
+    series.map((s) => s.key),
+    referenceLines.map((r) => r.value),
+    chartType === 'bar',
+  )
 
   const config: ChartConfig = Object.fromEntries(
     series.map((s) => [s.key, { label: s.label, color: s.color }])
@@ -76,11 +120,13 @@ export function MacroChart({
 
   const yAxis = (
     <YAxis
-      tickFormatter={(v) => `${v}${unit}`}
+      tickFormatter={(v) => `${Number(v).toFixed(1)}${unit}`}
       tick={{ fontSize: 10, fill: 'var(--muted-foreground)', fontFamily: 'var(--font-mono)' }}
       tickLine={false}
       axisLine={false}
-      width={44}
+      width={52}
+      domain={yDomain}
+      allowDataOverflow={false}
     />
   )
 
