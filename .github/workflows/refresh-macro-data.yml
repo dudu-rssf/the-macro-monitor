@@ -2,8 +2,8 @@ name: Refresh Macro Data
 
 on:
   schedule:
-    # Diariamente às 10:00 UTC = 07:00 BRT
-    - cron: '0 10 * * *'
+    - cron: '0 10 * * *'   # 07:00 BRT
+    - cron: '0 22 * * *'   # 19:00 BRT
   # Permite disparo manual pela interface do GitHub
   workflow_dispatch:
 
