@@ -27,6 +27,7 @@ interface MacroChartProps {
   unit?: string
   height?: number
   chartType?: 'line' | 'bar'
+  stacked?: boolean
   effectiveRange: TimeRange
 }
 
@@ -51,7 +52,7 @@ function formatValue(value: number, unit: string) {
 }
 
 export function MacroChart({
-  allData, series, referenceLines = [], unit = '%', height = 280, chartType = 'line', effectiveRange
+  allData, series, referenceLines = [], unit = '%', height = 280, chartType = 'line', stacked = false, effectiveRange
 }: MacroChartProps) {
   const data = cutData(allData, effectiveRange)
 
@@ -125,7 +126,7 @@ export function MacroChart({
           {grid}{xAxis}{yAxis}{tooltip}{legend}
           {refLines}
           {series.map((s) => (
-            <Bar key={s.key} dataKey={s.key} fill={s.color} radius={[2,2,0,0]} maxBarSize={16} />
+            <Bar key={s.key} dataKey={s.key} fill={s.color} radius={stacked ? [0,0,0,0] : [2,2,0,0]} maxBarSize={stacked ? 40 : 16} stackId={stacked ? 'stack' : undefined} />
           ))}
         </BarChart>
       ) : (

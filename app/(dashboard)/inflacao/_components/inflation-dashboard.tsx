@@ -249,7 +249,7 @@ export function InflationDashboard({ data, metaCentral, metaTeto }: Props) {
               { value: metaCentral, label: `Meta ${metaCentral}%`, color: 'hsl(142 76% 40%)' },
               { value: metaTeto,    label: `Teto ${metaTeto}%`,    color: 'hsl(0 72% 51%)' },
             ]}
-            unit="%" height={340} effectiveRange={range} />
+            unit="%" height={340} chartType="bar" stacked effectiveRange={range} />
         )}
       </SectionCard>
 
@@ -265,7 +265,7 @@ export function InflationDashboard({ data, metaCentral, metaTeto }: Props) {
               { value: metaCentral, label: `Meta ${metaCentral}%`, color: 'hsl(142 76% 40%)' },
               { value: metaTeto,    label: `Teto ${metaTeto}%`,    color: 'hsl(0 72% 51%)' },
             ]}
-            unit="%" height={300} effectiveRange={range} />
+            unit="%" height={300} chartType="bar" stacked effectiveRange={range} />
         )}
       </SectionCard>
 
