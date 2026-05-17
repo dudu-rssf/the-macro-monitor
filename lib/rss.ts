@@ -92,6 +92,10 @@ const SKIP_KW = [
   'vacina ', 'remédio ', 'medicamento ', 'tratamento médico',
   // Tech irrelevante
   'novo celular', 'lançamento de app', 'atualização do iphone',
+  // Clickbait / quiz / listas virais
+  'a cada 10 pessoas', 'em cada 10', 'você consegue', 'consegue resolver',
+  'quantas pessoas', 'teste seu', 'quiz:', 'desafio viral', 'só os gênios',
+  'tente resolver', 'descubra se você', 'veja se você sabe',
 ]
 
 function shouldSkip(title: string, desc: string): boolean {

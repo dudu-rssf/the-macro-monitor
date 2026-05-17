@@ -13,65 +13,71 @@ Se a notícia NÃO contém um dado econômico, financeiro, político-econômico 
 
 ══ CATEGORIAS ══
 
-irrelevante — DESCARTAR. Qualquer notícia que não tenha impacto econômico ou geopolítico claro:
+irrelevante — DESCARTAR. Qualquer notícia sem impacto econômico ou geopolítico claro:
   ✓ Ciência, pesquisa acadêmica, geologia, arqueologia, astronomia, biologia, medicina
   ✓ Esportes, futebol, tênis, olimpíadas, fórmula 1, qualquer competição
   ✓ Entretenimento, cinema, séries, música, celebridades, influenciadores
   ✓ Crime comum, violência, polícia, segurança pública sem impacto econômico
-  ✓ Clima, tempo, catástrofes naturais (exceto se causar impacto econômico mensurável e explícito)
+  ✓ Clima, tempo, catástrofes naturais sem dado econômico explícito
   ✓ Lifestyle, saúde, medicina, dieta, bem-estar, gastronomia, turismo, moda
   ✓ Educação, ENEM, concursos públicos, universidades
-  ✓ Imposto de renda PF, FGTS, benefícios individuais sem impacto macro
   ✓ Obituários, datas comemorativas, eventos culturais, religião
   ✓ Tecnologia sem impacto econômico (novo celular, rede social, app)
-  ✓ Fauna, flora, meio ambiente sem dado econômico (ex: nova espécie descoberta)
+  ✓ Quiz, desafio, curiosidade, conteúdo viral ("X em cada Y pessoas não conseguem...", "Teste se você sabe...", "Só os gênios...")
+  ✓ Listas de dicas pessoais, tutoriais, "como fazer"
 
-macro-brasil — economia brasileira com dado explícito:
+macro-brasil — economia brasileira com conteúdo econômico direto:
   ✓ Indicadores: IPCA, IGP-M, PIB, IBC-Br, CAGED, PNAD, Selic, câmbio BRL
-  ✓ Política monetária e fiscal: BCB, dívida pública, déficit, reforma tributária
+  ✓ Política monetária: BCB, Copom, Galípolo, decisões de juros, comunicados
+  ✓ Fiscal: dívida pública, resultado primário, arcabouço fiscal, reforma tributária
   ✓ Setor externo: balança comercial, exportações, reservas internacionais
-  ✓ Produção de commodities com impacto macro (petróleo, soja, minério)
-  ✗ NÃO inclui: política sem dado econômico, notícias de outros países, resultados de empresas
+  ✓ ATENÇÃO: audiências e reuniões do Congresso SOBRE política econômica, sistema financeiro ou BCB → macro-brasil (não geopolítica!)
+  ✓ Ex.: CAE, CMO, Comissão de Finanças discutindo Selic, crédito, regulação bancária → macro-brasil
+  ✗ NÃO inclui: resultados de empresas, notícias de outros países
 
 resultados — dados financeiros de empresas específicas:
   ✓ Lucro, prejuízo, EBITDA, receita líquida (ex: "Itaú lucra R$ 10 bi")
-  ✓ Dividendos, JCP, proventos
-  ✓ IPO, follow-on, emissão de debêntures, M&A
-  ✓ Guidance e metas de empresas
+  ✓ Dividendos, JCP, proventos, IPO, M&A, guidance
 
 macro-global — economia internacional com dado explícito:
-  ✓ Bancos centrais (Fed, BCE, BoJ): decisões de juros, QE, política monetária
+  ✓ Bancos centrais (Fed, BCE, BoJ): decisões de juros, política monetária
   ✓ Dados econômicos: inflação, PIB, emprego nos EUA/Europa/China
   ✓ Commodities: preço do petróleo, OPEP, minério, grãos
   ✓ Comércio: tarifas, sanções econômicas, acordos comerciais
   ✗ NÃO inclui: conflitos, eleições, diplomacia sem dado econômico
 
-geopolitica — eventos políticos e geopolíticos relevantes:
+geopolitica — eventos políticos e geopolíticos:
   ✓ Guerras, conflitos armados, tensões militares
   ✓ Eleições, golpes, transições de governo
   ✓ Diplomacia, sanções políticas
-  ✓ Política interna brasileira: Congresso, STF, partidos
+  ✓ Política interna brasileira SEM impacto econômico direto: escândalos, partidos, ética
+  ✗ NÃO inclui: Congresso discutindo política econômica, BCB, sistema financeiro (→ macro-brasil)
 
-══ EXEMPLOS — IRRELEVANTE (atenção especial) ══
+══ EXEMPLOS — IRRELEVANTE ══
+"7 a cada 10 pessoas não conseguem fazer essa conta de matemática" → irrelevante (quiz viral)
+"Descubra se você tem QI acima da média resolvendo esse desafio" → irrelevante (clickbait)
 "Cientista espanhol estuda crosta e descobre que Península Ibérica afundou" → irrelevante (geologia)
 "Pesquisa revela que brasileiros dormem menos que a média global" → irrelevante (saúde)
-"Nova espécie de ave descoberta na Amazônia" → irrelevante (biologia)
 "Astro da NBA assina contrato milionário" → irrelevante (esporte)
 "Festival de Cannes anuncia premiados" → irrelevante (entretenimento)
-"Terremoto de magnitude 4 atinge região" → irrelevante (sem dado econômico)
-"Governo lança app de serviços digitais" → irrelevante (tecnologia sem impacto macro)
+
+══ EXEMPLOS — A DISTINÇÃO CRÍTICA: CONGRESSO ECONÔMICO vs POLÍTICO ══
+"CAE confirma audiência com Galípolo sobre Fundo Master" → macro-brasil (BCB/regulação financeira)
+"Senado aprova regulamentação do mercado de capitais" → macro-brasil (regulação financeira)
+"Câmara vota reforma tributária — IVA unificado" → macro-brasil (impacto econômico direto)
+"Lula e Lira discutem composição de ministérios" → geopolitica (política partidária)
+"STF julga ação sobre emendas parlamentares" → geopolitica (sem impacto econômico direto)
+"CPI do MST: depoimento de ministro" → geopolitica (político, sem dado macro)
 
 ══ EXEMPLOS — CATEGORIAS VÁLIDAS ══
 "Petrobras reporta lucro de R$ 40 bi no 4T24" → resultados
 "Itaú anuncia dividendos de R$ 0,85 por ação" → resultados
 "Petrobras eleva produção de petróleo em 8%" → macro-brasil
+"BCB sobe Selic em 0,5 ponto para 13,75%" → macro-brasil
 "Fed mantém juros em 4,5%" → macro-global
-"Países do Golfo aumentam produção de petróleo" → macro-global
-"Tensões no Golfo Pérsico ameaçam rotas" → geopolitica
-"Reino Unido eleva juros em 0,25 ponto" → macro-global
-"Eleições no Reino Unido: trabalhistas vencem" → geopolitica
-"Lula sanciona reforma tributária" → macro-brasil
 "Trump impõe tarifa de 25% sobre aço" → macro-global
+"Tensões no Golfo Pérsico ameaçam rotas" → geopolitica
+"Eleições no Reino Unido: trabalhistas vencem" → geopolitica
 
 ══ FORMATO DE SAÍDA ══
 Para cada notícia:
