@@ -74,8 +74,9 @@ ${contexto}`
     const bullets = text
       .split('\n')
       .map((l: string) => l.trim())
-      .filter((l: string) => l.startsWith('•'))
-      .map((l: string) => l.replace(/^•\s*/, '').trim())
+      .filter((l: string) => l.length > 20)
+      .map((l: string) => l.replace(/^[•\-\*–]\s*|^\d+[\.\)]\s*/, '').trim())
+      .filter((l: string) => l.length > 20)
 
     return NextResponse.json({ bullets, generatedAt: new Date().toISOString() })
   } catch {
