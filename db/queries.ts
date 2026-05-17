@@ -1,6 +1,6 @@
 import { db } from './client'
 import { macroSeriesMeta, macroSeriesData } from './schema'
-import { eq, desc, and, gte } from 'drizzle-orm'
+import { eq, desc, and, gte, sql } from 'drizzle-orm'
 
 export interface SeriesPoint {
   date: string   // YYYY-MM-DD
@@ -48,6 +48,35 @@ export async function getSeriesHistory(
       value: parseFloat(r.value as string),
     })),
   }
+}
+
+// Para séries diárias: reamostrage para mensal (último valor de cada mês)
+export async function getSeriesMonthly(
+  sourceCode: string,
+  from: Date
+): Promise<SeriesPoint[]> {
+  const [meta] = await db
+    .select({ id: macroSeriesMeta.id })
+    .from(macroSeriesMeta)
+    .where(eq(macroSeriesMeta.sourceCode, sourceCode))
+    .limit(1)
+
+  if (!meta) return []
+
+  const fromStr = from.toISOString().split('T')[0]
+
+  const rows = await db.execute(sql`
+    SELECT DISTINCT ON (date_trunc('month', date::date))
+      date::text AS date,
+      value::text AS value
+    FROM macro_series_data
+    WHERE series_id = ${meta.id} AND date >= ${fromStr}
+    ORDER BY date_trunc('month', date::date), date DESC
+  `)
+
+  return (rows as unknown as { date: string; value: string }[])
+    .map((r) => ({ date: r.date.slice(0, 10), value: parseFloat(r.value) }))
+    .sort((a, b) => a.date.localeCompare(b.date))
 }
 
 export async function getSeriesHistoryFrom(
