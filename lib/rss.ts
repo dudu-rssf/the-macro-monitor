@@ -1,65 +1,47 @@
-export type NewsCategory = 'macro-brasil' | 'macro-global' | 'negocios-brasil'
+export type NewsCategory =
+  | 'macro-brasil'
+  | 'macro-global'
+  | 'geopolitica-global'
+  | 'politica-brasileira'
+  | 'negocios-brasil'
 
 export interface NewsItem {
-  id: string
-  title: string
-  url: string
+  id:          string
+  title:       string
+  url:         string
   description: string
   publishedAt: string
-  source: string
-  category: NewsCategory
+  source:      string
+  category:    NewsCategory
+  summary:     string
 }
 
 const FEEDS: { url: string; source: string; defaultCategory: NewsCategory }[] = [
-  {
-    url: 'https://agenciabrasil.ebc.com.br/rss/economia/feed.xml',
-    source: 'Agência Brasil',
-    defaultCategory: 'macro-brasil',
-  },
-  {
-    url: 'https://g1.globo.com/rss/g1/economia/',
-    source: 'G1 Economia',
-    defaultCategory: 'macro-brasil',
-  },
-  {
-    url: 'https://www.infomoney.com.br/feed/',
-    source: 'InfoMoney',
-    defaultCategory: 'macro-brasil',
-  },
-  {
-    url: 'https://exame.com/feed/',
-    source: 'Exame',
-    defaultCategory: 'negocios-brasil',
-  },
+  { url: 'https://agenciabrasil.ebc.com.br/rss/economia/feed.xml', source: 'Agência Brasil', defaultCategory: 'macro-brasil'    },
+  { url: 'https://g1.globo.com/rss/g1/economia/',                  source: 'G1 Economia',    defaultCategory: 'macro-brasil'    },
+  { url: 'https://www.infomoney.com.br/feed/',                     source: 'InfoMoney',      defaultCategory: 'negocios-brasil' },
+  { url: 'https://exame.com/feed/',                                source: 'Exame',          defaultCategory: 'negocios-brasil' },
 ]
 
-const GLOBAL_KW = [
-  'fed ', 'federal reserve', 'bce', 'banco central europeu',
-  'china', 'estados unidos', ' eua', 'europa', 'global', 'mundial',
-  'fmi', 'banco mundial', 'ocde', 'petróleo', 'commodities',
-  'wall street', 'nasdaq', 'japão', 'reino unido', 'alemanha',
-  'trump', 'powell', 'inflação global', 'guerra comercial', 'tarifa',
-]
-
-const NEGOCIOS_KW = [
-  'empresa', 'ações', 'bolsa', 'ibovespa', 'resultado trimestral',
-  'lucro', 'prejuízo', 'fusão', 'aquisição', 'ipo',
-  'dividendo', 'petrobras', 'vale', 'itaú', 'bradesco',
-  'varejo', 'startup', 'b3',
-]
+// Basic keyword fallback (Groq overrides this in the API route)
+const GLOBAL_KW    = ['fed ', 'federal reserve', 'bce', 'china', 'estados unidos', ' eua', 'global', 'mundial', 'fmi', 'petróleo', 'commodities', 'trump', 'powell', 'tarifa']
+const NEGOCIOS_KW  = ['empresa', 'ações', 'bolsa', 'ibovespa', 'resultado trimestral', 'lucro', 'prejuízo', 'fusão', 'aquisição', 'ipo', 'dividendo', 'petrobras', 'vale', 'itaú', 'b3']
+const SKIP_KW      = ['horóscopo', 'futebol', 'copa do', 'campeonato', 'esporte', ' morto', 'assassinato', 'ataque armado', 'bala perdida', 'acidente de tr']
 
 function categorize(title: string, desc: string, def: NewsCategory): NewsCategory {
   const t = (title + ' ' + desc).toLowerCase()
-  if (GLOBAL_KW.some(k => t.includes(k))) return 'macro-global'
+  if (GLOBAL_KW.some(k => t.includes(k)))   return 'macro-global'
   if (NEGOCIOS_KW.some(k => t.includes(k))) return 'negocios-brasil'
   return def
 }
 
+function shouldSkip(title: string, desc: string): boolean {
+  const t = (title + ' ' + desc).toLowerCase()
+  return SKIP_KW.some(k => t.includes(k))
+}
+
 function tag(xml: string, name: string): string {
-  const re = new RegExp(
-    `<${name}[^>]*>\\s*(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?\\s*<\\/${name}>`,
-    'i',
-  )
+  const re = new RegExp(`<${name}[^>]*>\\s*(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?\\s*<\\/${name}>`, 'i')
   return xml.match(re)?.[1]?.trim() ?? ''
 }
 
@@ -79,9 +61,10 @@ function parseItems(xml: string, source: string, def: NewsCategory): NewsItem[] 
     const chunk = m[1]
     const title = clean(tag(chunk, 'title'))
     const url   = clean(tag(chunk, 'link') || tag(chunk, 'guid'))
-    const desc  = clean(tag(chunk, 'description')).slice(0, 220)
+    const desc  = clean(tag(chunk, 'description')).slice(0, 200)
     const pub   = tag(chunk, 'pubDate')
     if (!title || !url) continue
+    if (shouldSkip(title, desc)) continue
     items.push({
       id:          url,
       title,
@@ -90,6 +73,7 @@ function parseItems(xml: string, source: string, def: NewsCategory): NewsItem[] 
       publishedAt: pub ? new Date(pub).toISOString() : new Date().toISOString(),
       source,
       category:    categorize(title, desc, def),
+      summary:     '',
     })
   }
   return items
