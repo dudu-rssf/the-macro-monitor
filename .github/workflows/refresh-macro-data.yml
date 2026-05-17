@@ -1,0 +1,32 @@
+name: Refresh Macro Data
+
+on:
+  schedule:
+    # Diariamente às 10:00 UTC = 07:00 BRT
+    - cron: '0 10 * * *'
+  # Permite disparo manual pela interface do GitHub
+  workflow_dispatch:
+
+jobs:
+  refresh-bcb:
+    name: Buscar dados BCB SGS
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Rodar refresh BCB
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/refresh-bcb.ts
