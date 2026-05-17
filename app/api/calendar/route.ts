@@ -210,7 +210,7 @@ export async function GET() {
 
   const [dbResults, focus] = await Promise.all([
     Promise.all(codes.map(c => getSeriesLatestTwo(c).catch(() => null))),
-    fetchFocus().catch(() => ({ ipca: {}, igpm: {}, selic: null })),
+    fetchFocus().catch(() => ({ ipca: {} as Record<string, number>, igpm: {} as Record<string, number>, selic: null })),
   ])
 
   // Map: seriesCode → { value, date }
