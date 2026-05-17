@@ -4,24 +4,26 @@ import { fetchAllNews, type NewsItem, type NewsCategory } from '@/lib/rss'
 export const revalidate = 900
 
 type GroqCategory = NewsCategory | 'irrelevante'
-
 interface GroqResult { id: string; category: GroqCategory; summary: string }
 
+// Categorias propositalmente amplas — Groq deve preferir macro quando em dúvida
 const GROQ_SYSTEM = `Você é um classificador e resumidor de notícias para um dashboard macroeconômico brasileiro.
 
-Categorias (escolha a mais precisa):
-- macro-brasil: dados macro BR — PIB/IBC-Br, IPCA, emprego, Selic, câmbio BRL, fiscal, BCB, IBGE, balança comercial, dívida pública
-- macro-global: dados macro global — Fed, BCE, BoJ, inflação nos EUA/Europa, commodities como fator macro, crescimento mundial
-- geopolitica-global: geopolítica — guerras, sanções, acordos internacionais, eleições no exterior, relações diplomáticas
-- politica-brasileira: política doméstica BR — Congresso, reformas, governo Lula, orçamento, eleições 2026, STF
-- negocios-brasil: empresas BR — resultados, fusões, B3, IPOs, setorial
-- irrelevante: crime, esportes, acidentes, clima, impostos PF, moda, saúde individual, curiosidades
+Categorias (seja INCLUSIVO — prefira macro-brasil ou macro-global quando houver dúvida):
+- macro-brasil: qualquer notícia sobre a economia brasileira — inflação (IPCA/IGP/INPC), crescimento/PIB/IBC-Br, emprego/CAGED/PNAD, câmbio BRL, Selic/juros/BCB, crédito, setor externo, dívida pública, deficit fiscal, exportações, importações, atividade econômica, renda, commodities com efeito no Brasil, decisões do governo com impacto econômico
+- macro-global: qualquer notícia com impacto econômico global — Fed/BCE/BoJ e outros bancos centrais, inflação nos EUA/Europa/China, crescimento/recessão global, petróleo, minério de ferro, soja e demais commodities, tarifas/guerra comercial, dados econômicos de EUA/China/Europa, risco global, dólar índice
+- geopolitica-global: geopolítica sem foco econômico primário — conflitos armados, sanções políticas, eleições no exterior, diplomacia
+- politica-brasileira: política doméstica sem foco macro — Congresso, eleições 2026, STF, partidos, escândalos políticos, reformas políticas
+- negocios-brasil: empresas específicas — resultados trimestrais, fusões, IPOs, estratégia corporativa, demissões em empresa específica
+- irrelevante: crime, esportes, acidentes, clima, saúde individual, moda, entretenimento, horóscopo, concursos, impostos pessoa física, receitas
+
+REGRA: em caso de dúvida entre macro-brasil e politica-brasileira, escolha macro-brasil. Entre macro-global e geopolitica-global, escolha macro-global se houver qualquer dado econômico.
 
 Para cada notícia retorne:
 - "category": uma das categorias acima
-- "summary": 1-2 frases em português com os números/dados essenciais (vazio se irrelevante)
+- "summary": 2-3 frases em português com os dados, números e impactos essenciais (string vazia se irrelevante)
 
-Retorne APENAS um JSON válido no formato: {"items":[{"id":"...","category":"...","summary":"..."}]}`
+Retorne APENAS JSON válido: {"items":[{"id":"...","category":"...","summary":"..."}]}`
 
 async function enrichWithGroq(items: NewsItem[]): Promise<NewsItem[]> {
   const payload = items.map(n => ({ id: n.id, title: n.title, description: n.description }))
@@ -33,9 +35,9 @@ async function enrichWithGroq(items: NewsItem[]): Promise<NewsItem[]> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model:       'llama-3.3-70b-versatile',
-      temperature: 0.1,
-      max_tokens:  2000,
+      model:           'llama-3.3-70b-versatile',
+      temperature:     0.1,
+      max_tokens:      3000,
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: GROQ_SYSTEM },
@@ -75,7 +77,6 @@ export async function GET() {
     const enriched = await enrichWithGroq(batch)
     return NextResponse.json(enriched)
   } catch {
-    // Groq failed — return keyword-categorized items without summaries
     return NextResponse.json(batch)
   }
 }

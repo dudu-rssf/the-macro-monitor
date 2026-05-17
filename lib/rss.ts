@@ -17,10 +17,12 @@ export interface NewsItem {
 }
 
 const FEEDS: { url: string; source: string; defaultCategory: NewsCategory }[] = [
-  { url: 'https://agenciabrasil.ebc.com.br/rss/economia/feed.xml', source: 'Agência Brasil', defaultCategory: 'macro-brasil'    },
-  { url: 'https://g1.globo.com/rss/g1/economia/',                  source: 'G1 Economia',    defaultCategory: 'macro-brasil'    },
-  { url: 'https://www.infomoney.com.br/feed/',                     source: 'InfoMoney',      defaultCategory: 'negocios-brasil' },
-  { url: 'https://exame.com/feed/',                                source: 'Exame',          defaultCategory: 'negocios-brasil' },
+  { url: 'https://agenciabrasil.ebc.com.br/rss/economia/feed.xml', source: 'Agência Brasil',  defaultCategory: 'macro-brasil'    },
+  { url: 'https://g1.globo.com/rss/g1/economia/',                  source: 'G1 Economia',     defaultCategory: 'macro-brasil'    },
+  { url: 'https://www.infomoney.com.br/feed/',                     source: 'InfoMoney',       defaultCategory: 'negocios-brasil' },
+  { url: 'https://exame.com/feed/',                                source: 'Exame',           defaultCategory: 'negocios-brasil' },
+  { url: 'https://www.cnnbrasil.com.br/economia/feed/',            source: 'CNN Brasil',      defaultCategory: 'macro-brasil'    },
+  { url: 'https://feeds.reuters.com/reuters/BRTopNews',            source: 'Reuters Brasil',  defaultCategory: 'macro-global'    },
 ]
 
 // Basic keyword fallback (Groq overrides this in the API route)

@@ -30,6 +30,13 @@ const CATEGORY_LABEL: Record<NewsCategory, string> = {
   'negocios-brasil':     'Negócios',
 }
 
+function todayBRT(): string {
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date()).split('/').reverse().join('-') // YYYY-MM-DD
+}
+
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
   const m = Math.floor(diff / 60_000)
@@ -41,15 +48,23 @@ function timeAgo(iso: string): string {
 }
 
 export function NewsSection() {
-  const [news,    setNews]    = useState<NewsItem[]>([])
-  const [filter,  setFilter]  = useState<Filter>('tudo')
-  const [loading, setLoading] = useState(true)
-  const [lastAt,  setLastAt]  = useState<Date | null>(null)
+  const [allNews, setAllNews]  = useState<NewsItem[]>([])
+  const [filter,  setFilter]   = useState<Filter>('tudo')
+  const [loading, setLoading]  = useState(true)
+  const [lastAt,  setLastAt]   = useState<Date | null>(null)
+  const [today,   setToday]    = useState('')
+
+  // today string recomputed at render (resets at BRT midnight)
+  useEffect(() => { setToday(todayBRT()) }, [])
 
   const load = useCallback(() => {
     fetch('/api/news')
       .then(r => r.json())
-      .then((data: NewsItem[]) => { setNews(data); setLastAt(new Date()); setLoading(false) })
+      .then((data: NewsItem[]) => {
+        setAllNews(data)
+        setLastAt(new Date())
+        setLoading(false)
+      })
       .catch(() => setLoading(false))
   }, [])
 
@@ -59,17 +74,37 @@ export function NewsSection() {
     return () => clearInterval(id)
   }, [load])
 
-  const filtered = filter === 'tudo' ? news : news.filter(n => n.category === filter)
+  // Filter to today's news in BRT, fallback to all if nothing today
+  const todayNews = today
+    ? allNews.filter(n => {
+        const itemDate = new Date(n.publishedAt)
+        const itemBRT  = new Intl.DateTimeFormat('pt-BR', {
+          timeZone: 'America/Sao_Paulo',
+          year: 'numeric', month: '2-digit', day: '2-digit',
+        }).format(itemDate).split('/').reverse().join('-')
+        return itemBRT === today
+      })
+    : allNews
+
+  const displayNews = todayNews.length >= 3 ? todayNews : allNews.slice(0, 20)
+  const filtered    = filter === 'tudo' ? displayNews : displayNews.filter(n => n.category === filter)
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold">Notícias</h2>
-        {lastAt && (
-          <span className="text-[10px] text-muted-foreground font-mono">
-            atualizado {timeAgo(lastAt.toISOString())}
-          </span>
-        )}
+        <div className="flex flex-col items-end gap-0.5">
+          {today && (
+            <span className="text-[10px] text-muted-foreground/60 font-mono">
+              {today.split('-').reverse().join('/')}
+            </span>
+          )}
+          {lastAt && (
+            <span className="text-[10px] text-muted-foreground font-mono">
+              atualizado {timeAgo(lastAt.toISOString())}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="flex gap-1 flex-wrap">
@@ -88,14 +123,16 @@ export function NewsSection() {
         ))}
       </div>
 
-      <div className="flex flex-col gap-1 overflow-y-auto max-h-[520px] pr-1">
+      <div className="flex flex-col gap-1.5 overflow-y-auto max-h-[540px] pr-1">
         {loading && Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-16 rounded-md bg-muted/40 animate-pulse" />
+          <div key={i} className="h-20 rounded-md bg-muted/40 animate-pulse" />
         ))}
 
         {!loading && filtered.length === 0 && (
-          <p className="text-xs text-muted-foreground py-4 text-center">
-            Nenhuma notícia disponível no momento.
+          <p className="text-xs text-muted-foreground py-6 text-center">
+            {filter === 'tudo'
+              ? 'Aguardando divulgações do dia...'
+              : 'Nenhuma notícia nesta categoria hoje.'}
           </p>
         )}
 
@@ -105,7 +142,7 @@ export function NewsSection() {
             href={item.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex flex-col gap-1 rounded-md px-3 py-2.5 hover:bg-muted/50 transition-colors border border-transparent hover:border-border/50"
+            className="group flex flex-col gap-1.5 rounded-md px-3 py-2.5 hover:bg-muted/50 transition-colors border border-transparent hover:border-border/50"
           >
             <div className="flex items-center gap-2">
               <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0 ${CATEGORY_COLOR[item.category]}`}>
@@ -118,15 +155,17 @@ export function NewsSection() {
                 {timeAgo(item.publishedAt)}
               </span>
             </div>
+
             <p className="text-xs font-medium leading-snug line-clamp-2 text-foreground/90 group-hover:text-foreground">
               {item.title}
             </p>
+
             {item.summary ? (
-              <p className="text-[11px] text-muted-foreground leading-snug line-clamp-3">
+              <p className="text-xs text-muted-foreground leading-relaxed line-clamp-4">
                 {item.summary}
               </p>
             ) : item.description ? (
-              <p className="text-[11px] text-muted-foreground leading-snug line-clamp-2">
+              <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
                 {item.description}
               </p>
             ) : null}
