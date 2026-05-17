@@ -89,14 +89,14 @@ Retorne APENAS JSON válido: {"items":[{"id":"...","category":"...","summary":".
 async function enrichWithGroq(items: NewsItem[]): Promise<NewsItem[]> {
   const payload = items.map(n => ({ id: n.id, title: n.title, description: n.description }))
 
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  const res = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+      'Authorization': `Bearer ${process.env.GEMINI_API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model:           'llama-3.3-70b-versatile',
+      model:           'gemini-2.0-flash',
       temperature:     0.0,
       max_tokens:      6000,
       response_format: { type: 'json_object' },
@@ -108,7 +108,7 @@ async function enrichWithGroq(items: NewsItem[]): Promise<NewsItem[]> {
     signal: AbortSignal.timeout(45_000),
   })
 
-  if (!res.ok) throw new Error(`Groq ${res.status}`)
+  if (!res.ok) throw new Error(`Gemini ${res.status}`)
 
   const json   = await res.json()
   const text   = json.choices?.[0]?.message?.content ?? ''

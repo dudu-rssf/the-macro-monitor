@@ -53,10 +53,19 @@ export async function GET() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
     }),
 
-    check('Groq API', 'APIs de IA', async () => {
+    check('Groq API (Contexto IA)', 'APIs de IA', async () => {
       if (!process.env.GROQ_API_KEY) throw new Error('GROQ_API_KEY não configurada')
       const res = await fetch('https://api.groq.com/openai/v1/models', {
         headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
+        signal: AbortSignal.timeout(8_000),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    }),
+
+    check('Gemini API (Notícias)', 'APIs de IA', async () => {
+      if (!process.env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY não configurada')
+      const res = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/models', {
+        headers: { Authorization: `Bearer ${process.env.GEMINI_API_KEY}` },
         signal: AbortSignal.timeout(8_000),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
