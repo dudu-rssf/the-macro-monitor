@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSeriesLatestTwo } from '@/db/queries'
 
-export const revalidate = 3600 // 1 hora
+export const dynamic = 'force-dynamic'
 
 function v(n: number | null | undefined, dec = 2): string {
   return n != null ? n.toFixed(dec) : '—'
