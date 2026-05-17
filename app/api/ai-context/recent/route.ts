@@ -1,7 +1,6 @@
+import { unstable_cache } from 'next/cache'
 import { NextResponse } from 'next/server'
 import { getSeriesHistory } from '@/db/queries'
-
-export const revalidate = 3600
 
 // Todas as séries do site — quanto mais, melhor a detecção de outliers
 const SERIES = [
@@ -63,12 +62,10 @@ async function fetchFocusIPCA(refMonth: string): Promise<number | null> {
   }
 }
 
-export async function GET() {
-  if (!process.env.GEMINI_API_KEY) {
-    return NextResponse.json({ bullets: [], generatedAt: null, error: 'GEMINI_API_KEY não configurada no servidor.' })
-  }
+type Result = { bullets: string[]; generatedAt: string | null; error?: string }
 
-  try {
+const compute = unstable_cache(
+  async (): Promise<Result> => {
     // Fetch last 13 points for each series (1 latest + 12 historical for avg/std)
     const histories = await Promise.all(
       SERIES.map(s => getSeriesHistory(s.code, 13).catch(() => null))
@@ -93,7 +90,7 @@ export async function GET() {
 
       const sorted  = [...h.data].sort((a, b) => a.date.localeCompare(b.date))
       const latest  = sorted.at(-1)!
-      const hist12  = sorted.slice(-13, -1) // up to 12 prev points
+      const hist12  = sorted.slice(-13, -1)
       if (hist12.length === 0) continue
 
       const histVals = hist12.map(p => p.value)
@@ -106,7 +103,6 @@ export async function GET() {
       let line = `• ${spec.label} (${latest.date.slice(0, 7)}): ${latest.value.toFixed(spec.dec)} ${spec.unit}`
       line += ` | média 12m: ${mean.toFixed(spec.dec)} | desvio: ${devSign}${dev.toFixed(spec.dec)} | z-score: ${z}`
 
-      // IPCA: compare with Focus
       if (spec.code === '433' && focusIPCA !== null) {
         const surprise = latest.value - focusIPCA
         line += ` | expectativa Focus: ${focusIPCA.toFixed(spec.dec)} | surpresa: ${surprise >= 0 ? '+' : ''}${surprise.toFixed(spec.dec)}`
@@ -143,7 +139,7 @@ ${lines.join('\n')}`
 
     if (!res.ok) {
       const errBody = await res.text().catch(() => '')
-      return NextResponse.json({ bullets: [], generatedAt: null, error: `API error ${res.status}: ${errBody.slice(0, 120)}` })
+      return { bullets: [], generatedAt: null, error: `API error ${res.status}: ${errBody.slice(0, 120)}` }
     }
 
     const data    = await res.json()
@@ -155,7 +151,21 @@ ${lines.join('\n')}`
       .map((l: string) => l.replace(/^[•\-\*–]\s*|^\d+[\.\)]\s*/, '').trim())
       .filter((l: string) => l.length > 20)
 
-    return NextResponse.json({ bullets, generatedAt: new Date().toISOString() })
+    return { bullets, generatedAt: new Date().toISOString() }
+  },
+  ['ai-context-recent'],
+  { revalidate: 86400, tags: ['ai-context'] },
+)
+
+export const dynamic = 'force-dynamic'
+
+export async function GET() {
+  if (!process.env.GEMINI_API_KEY) {
+    return NextResponse.json({ bullets: [], generatedAt: null, error: 'GEMINI_API_KEY não configurada no servidor.' })
+  }
+  try {
+    const result = await compute()
+    return NextResponse.json(result)
   } catch (e) {
     return NextResponse.json({ bullets: [], generatedAt: null, error: String(e).slice(0, 150) })
   }

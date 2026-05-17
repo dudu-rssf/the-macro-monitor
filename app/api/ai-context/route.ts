@@ -1,36 +1,33 @@
+import { unstable_cache } from 'next/cache'
 import { NextResponse } from 'next/server'
 import { getSeriesLatestTwo } from '@/db/queries'
-
-export const revalidate = 3600
 
 function v(n: number | null | undefined, dec = 2): string {
   return n != null ? n.toFixed(dec) : '—'
 }
 
-export async function GET() {
-  if (!process.env.GEMINI_API_KEY) {
-    return NextResponse.json({ bullets: [], generatedAt: null, error: 'GEMINI_API_KEY não configurada no servidor.' })
-  }
+type Result = { bullets: string[]; generatedAt: string | null; error?: string }
 
-  try {
+const compute = unstable_cache(
+  async (): Promise<Result> => {
     const [ipca, selic, desemprego, ibcBr, dlsp, dbgg, primario, usdBrl, embi, rendimento] =
       await Promise.all([
-        getSeriesLatestTwo('13522'),  // IPCA 12m
-        getSeriesLatestTwo('1178'),   // Selic
-        getSeriesLatestTwo('24369'),  // Desemprego PNAD
-        getSeriesLatestTwo('22065'),  // IBC-Br 12m
-        getSeriesLatestTwo('4513'),   // DLSP % PIB
-        getSeriesLatestTwo('13762'),  // DBGG % PIB
-        getSeriesLatestTwo('5788'),   // Primário sem desval % PIB 12m
-        getSeriesLatestTwo('10813'),  // USD/BRL
-        getSeriesLatestTwo('11752'),  // EMBI+
-        getSeriesLatestTwo('24380'),  // Rendimento médio real
+        getSeriesLatestTwo('13522'),
+        getSeriesLatestTwo('1178'),
+        getSeriesLatestTwo('24369'),
+        getSeriesLatestTwo('22065'),
+        getSeriesLatestTwo('4513'),
+        getSeriesLatestTwo('13762'),
+        getSeriesLatestTwo('5788'),
+        getSeriesLatestTwo('10813'),
+        getSeriesLatestTwo('11752'),
+        getSeriesLatestTwo('24380'),
       ])
 
-    const selicVal  = selic?.latest.value  ?? null
-    const ipcaVal   = ipca?.latest.value   ?? null
-    const juroReal  = selicVal != null && ipcaVal != null ? selicVal - ipcaVal : null
-    const primPct   = primario?.latest.value != null ? -primario.latest.value : null
+    const selicVal = selic?.latest.value  ?? null
+    const ipcaVal  = ipca?.latest.value   ?? null
+    const juroReal = selicVal != null && ipcaVal != null ? selicVal - ipcaVal : null
+    const primPct  = primario?.latest.value != null ? -primario.latest.value : null
 
     const contexto = [
       `• IPCA acumulado 12 meses: ${v(ipcaVal)}% (meta BCB 2025: 3,0%; teto: 4,5%)`,
@@ -73,7 +70,7 @@ ${contexto}`
 
     if (!res.ok) {
       const errBody = await res.text().catch(() => '')
-      return NextResponse.json({ bullets: [], generatedAt: null, error: `API error ${res.status}: ${errBody.slice(0, 120)}` })
+      return { bullets: [], generatedAt: null, error: `API error ${res.status}: ${errBody.slice(0, 120)}` }
     }
 
     const data = await res.json()
@@ -85,7 +82,21 @@ ${contexto}`
       .map((l: string) => l.replace(/^[•\-\*–]\s*|^\d+[\.\)]\s*/, '').trim())
       .filter((l: string) => l.length > 20)
 
-    return NextResponse.json({ bullets, generatedAt: new Date().toISOString() })
+    return { bullets, generatedAt: new Date().toISOString() }
+  },
+  ['ai-context-geral'],
+  { revalidate: 86400, tags: ['ai-context'] },
+)
+
+export const dynamic = 'force-dynamic'
+
+export async function GET() {
+  if (!process.env.GEMINI_API_KEY) {
+    return NextResponse.json({ bullets: [], generatedAt: null, error: 'GEMINI_API_KEY não configurada no servidor.' })
+  }
+  try {
+    const result = await compute()
+    return NextResponse.json(result)
   } catch (e) {
     return NextResponse.json({ bullets: [], generatedAt: null, error: String(e).slice(0, 150) })
   }
