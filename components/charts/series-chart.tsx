@@ -40,7 +40,7 @@ export function SeriesChart({ data, series, referenceLines = [], unit = '', heig
   }
 
   return (
-    <ChartContainer config={config} style={{ height }}>
+    <ChartContainer config={config} className="w-full aspect-auto" style={{ height }}>
       <LineChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
         <XAxis

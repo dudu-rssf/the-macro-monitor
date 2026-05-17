@@ -119,7 +119,7 @@ export function MacroChart({
   )
 
   return (
-    <ChartContainer config={config} style={{ height }}>
+    <ChartContainer config={config} className="w-full aspect-auto" style={{ height }}>
       {chartType === 'bar' ? (
         <BarChart {...commonProps}>
           {grid}{xAxis}{yAxis}{tooltip}{legend}
