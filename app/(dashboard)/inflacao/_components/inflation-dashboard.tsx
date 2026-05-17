@@ -207,8 +207,7 @@ export function InflationDashboard({ data, metaCentral, metaTeto }: Props) {
           <MacroChart allData={data.difusao.map((p) => ({ date: p.date, value: p.value }))}
             series={[{ key: 'value', label: 'Difusão', color: 'var(--chart-5)' }]}
             referenceLines={[{ value: 50, label: '50%', color: 'var(--muted-foreground)' }]}
-            unit="%" height={220} chartType="bar" effectiveRange={range}
-            yDomain={[0, 100]} />
+            unit="%" height={220} chartType="bar" effectiveRange={range} />
         )}
       </SectionCard>
 
