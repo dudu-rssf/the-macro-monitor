@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSeriesHistory } from '@/db/queries'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 3600
 
 // Todas as séries do site — quanto mais, melhor a detecção de outliers
 const SERIES = [
