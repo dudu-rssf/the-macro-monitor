@@ -6,8 +6,10 @@ import * as schema from './schema'
 const globalForDb = globalThis as unknown as { _pgClient?: ReturnType<typeof postgres> }
 
 const client = globalForDb._pgClient ?? postgres(process.env.DATABASE_URL!, {
-  prepare: false,  // obrigatorio para Supabase PgBouncer
-  max: 3,          // limite conservador — PgBouncer multiplexeia
+  prepare: false,       // obrigatorio para Supabase Supavisor/PgBouncer
+  max: 1,               // serverless: uma conexao por invocacao
+  idle_timeout: 20,     // fecha conexoes ociosas rapido
+  connect_timeout: 10,  // falha rapido se nao conectar
 })
 
 if (process.env.NODE_ENV !== 'production') {
