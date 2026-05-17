@@ -6,10 +6,6 @@ import { ArrowUpRight } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/components/macro/kpi-card'
 import type { SeriesPoint } from '@/components/macro/types'
-import { NewsSection } from './news-section'
-import { CalendarSection } from './calendar-section'
-import { AiContextSection } from './ai-context-section'
-import { ErrorBoundary } from './error-boundary'
 
 type Kv = { latest: SeriesPoint; previous: SeriesPoint | null } | null
 
@@ -58,9 +54,9 @@ function MetricRow({
   customValue?: number | null
   customDate?: string | null
 }) {
-  const val   = customValue  !== undefined ? customValue   : kv?.latest.value  ?? null
+  const val   = customValue !== undefined ? customValue  : kv?.latest.value ?? null
   const prev  = kv?.previous?.value ?? null
-  const date  = customDate   !== undefined ? customDate    : kv?.latest.date
+  const date  = customDate  !== undefined ? customDate   : kv?.latest.date
   const delta = val !== null && prev !== null ? val - prev : null
   const dUnit = deltaUnit ?? unit
 
@@ -75,9 +71,7 @@ function MetricRow({
       <div className="text-right shrink-0">
         {val !== null ? (
           <>
-            <span className="text-sm font-mono font-semibold tabular-nums">
-              {val.toFixed(decimals)}
-            </span>
+            <span className="text-sm font-mono font-semibold tabular-nums">{val.toFixed(decimals)}</span>
             <span className="text-xs text-muted-foreground ml-0.5">{unit}</span>
             {delta !== null && (
               <span className={`ml-2 text-xs font-mono tabular-nums ${deltaColor}`}>
@@ -98,13 +92,8 @@ function MetricRow({
   )
 }
 
-function CategoryCard({
-  title, href, accentColor, children,
-}: {
-  title: string
-  href: string
-  accentColor: string
-  children: React.ReactNode
+function CategoryCard({ title, href, accentColor, children }: {
+  title: string; href: string; accentColor: string; children: React.ReactNode
 }) {
   return (
     <Link href={href} className="block group">
@@ -118,9 +107,7 @@ function CategoryCard({
             <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
           </div>
         </CardHeader>
-        <CardContent className="px-4 pb-3 pt-0">
-          {children}
-        </CardContent>
+        <CardContent className="px-4 pb-3 pt-0">{children}</CardContent>
       </Card>
     </Link>
   )
@@ -140,16 +127,6 @@ function statusFor(val: number | null, thresholds: { ok: number; warn: number; i
   }
 }
 
-function KpiSkeleton() {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="h-36 rounded-lg bg-muted/40 animate-pulse" />
-      ))}
-    </div>
-  )
-}
-
 export function OverviewDashboard() {
   const [data,    setData]    = useState<OverviewData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -161,23 +138,22 @@ export function OverviewDashboard() {
       .catch(() => setLoading(false))
   }, [])
 
-  const ibcBr12m   = data?.ibcBr12m   ?? null
-  const desemprego = data?.desemprego  ?? null
-  const rendimento = data?.rendimento  ?? null
-  const ipca12m    = data?.ipca12m     ?? null
-  const selic      = data?.selic       ?? null
-  const juroReal   = data?.juroReal    ?? { value: null, prev: null, date: null }
-  const dlsp       = data?.dlsp        ?? null
-  const dbgg       = data?.dbgg        ?? null
-  const primario12m = data?.primario12m ?? null
-  const inadim     = data?.inadim      ?? null
-  const spread     = data?.spread      ?? null
-  const usdBrl     = data?.usdBrl      ?? null
-  const embi       = data?.embi        ?? null
-  const reservas   = data?.reservas    ?? null
+  const ibcBr12m    = data?.ibcBr12m    ?? null
+  const desemprego  = data?.desemprego   ?? null
+  const rendimento  = data?.rendimento   ?? null
+  const ipca12m     = data?.ipca12m      ?? null
+  const selic       = data?.selic        ?? null
+  const juroReal    = data?.juroReal     ?? { value: null, prev: null, date: null }
+  const dlsp        = data?.dlsp         ?? null
+  const dbgg        = data?.dbgg         ?? null
+  const primario12m = data?.primario12m  ?? null
+  const inadim      = data?.inadim       ?? null
+  const spread      = data?.spread       ?? null
+  const usdBrl      = data?.usdBrl       ?? null
+  const embi        = data?.embi         ?? null
+  const reservas    = data?.reservas     ?? null
 
   const ipca12mVal    = ipca12m?.latest.value    ?? null
-  const selicVal      = selic?.latest.value       ?? null
   const dlspVal       = dlsp?.latest.value        ?? null
   const dbggVal       = dbgg?.latest.value        ?? null
   const embiVal       = embi?.latest.value        ?? null
@@ -185,7 +161,6 @@ export function OverviewDashboard() {
   const ibcBr12mVal   = ibcBr12m?.latest.value    ?? null
   const desempregoVal = desemprego?.latest.value  ?? null
   const primario12mVal = primario12m?.latest.value ?? null
-
   const resultadoPrimario = primario12mVal !== null ? -primario12mVal : null
 
   const dates = [
@@ -196,32 +171,6 @@ export function OverviewDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Seção superior — Notícias | Calendário | IA */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-        <Card className="bg-card border-border">
-          <CardContent className="px-4 pt-4 pb-4">
-            <ErrorBoundary fallback="Erro ao carregar notícias.">
-              <NewsSection />
-            </ErrorBoundary>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border">
-          <CardContent className="px-4 pt-4 pb-4">
-            <ErrorBoundary fallback="Erro ao carregar calendário.">
-              <CalendarSection />
-            </ErrorBoundary>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border">
-          <CardContent className="px-4 pt-4 pb-4">
-            <ErrorBoundary fallback="Erro ao carregar análise de IA.">
-              <AiContextSection />
-            </ErrorBoundary>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Panorama Macro Brasil</h1>
@@ -236,7 +185,6 @@ export function OverviewDashboard() {
         )}
       </div>
 
-      {/* Legenda dos status */}
       <div className="flex items-center gap-4 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">{dot('ok')}   <span>Favorável</span></div>
         <div className="flex items-center gap-1.5">{dot('warn')} <span>Atenção</span></div>
@@ -244,10 +192,14 @@ export function OverviewDashboard() {
         <div className="flex items-center gap-1.5">{dot('info')} <span>Informativo</span></div>
       </div>
 
-      {/* Grid de categorias */}
-      {loading ? <KpiSkeleton /> : (
+      {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-36 rounded-lg bg-muted/40 animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           <CategoryCard title="Atividade" href="/atividade" accentColor="var(--chart-1)">
             <MetricRow label="IBC-Br variação 12 meses (proxy PIB)"
               kv={ibcBr12m} unit="%" deltaUnit=" pp"
@@ -263,10 +215,10 @@ export function OverviewDashboard() {
             <MetricRow label="IPCA acumulado 12 meses"
               kv={ipca12m} unit="%" deltaUnit=" pp" deltaInvert
               status={statusFor(ipca12mVal, { ok: 3.25, warn: 4.5, invert: true })} />
-            <MetricRow label="Meta BCB 2025 (centro)"
-              kv={null} unit="%" status="info" customValue={3.0} customDate={null} />
-            <MetricRow label="Teto da meta (banda ± 1,5 pp)"
-              kv={null} unit="%" status={statusFor(ipca12mVal, { ok: 4.5, warn: 4.5, invert: true })}
+            <MetricRow label="Meta BCB 2025 (centro)" kv={null} unit="%" status="info"
+              customValue={3.0} customDate={null} />
+            <MetricRow label="Teto da meta (banda ± 1,5 pp)" kv={null} unit="%"
+              status={statusFor(ipca12mVal, { ok: 4.5, warn: 4.5, invert: true })}
               customValue={4.5} customDate={null} />
           </CategoryCard>
 
@@ -311,7 +263,6 @@ export function OverviewDashboard() {
             <MetricRow label="Spread médio das operações de crédito"
               kv={spread} unit=" p.p." deltaUnit=" p.p." deltaInvert status="info" />
           </CategoryCard>
-
         </div>
       )}
 
