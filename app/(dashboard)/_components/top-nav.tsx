@@ -16,6 +16,7 @@ const navLinks = [
   { href: '/externo',            label: 'Externo',      tab: 'externo'            },
   { href: '/credito',            label: 'Crédito',      tab: 'credito'            },
   { href: '/mercados',           label: 'Mercados',     tab: 'mercados'           },
+  { href: '/quant',              label: 'Quant',        tab: null                 },
   { href: '/painel',             label: 'Painel',       tab: null                 },
 ]
 
