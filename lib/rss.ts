@@ -2,6 +2,7 @@ export type NewsCategory =
   | 'macro-brasil'
   | 'macro-global'
   | 'geopolitica'
+  | 'resultados'
 
 export interface NewsItem {
   id:          string
@@ -33,6 +34,19 @@ const FEEDS: { url: string; source: string; defaultCategory: NewsCategory }[] = 
   { url: 'https://www.suno.com.br/noticias/feed/',                           source: 'Suno Notícias',      defaultCategory: 'macro-brasil' },
   { url: 'https://capitalaberto.com.br/feed/',                               source: 'Capital Aberto',     defaultCategory: 'macro-brasil' },
   { url: 'https://br.investing.com/rss/news_25.rss',                         source: 'Investing.com BR',   defaultCategory: 'macro-brasil' },
+  { url: 'https://www.seudinheiro.com/feed/',                                source: 'Seu Dinheiro',       defaultCategory: 'macro-brasil' },
+  { url: 'https://veja.abril.com.br/feed/',                                  source: 'Veja',               defaultCategory: 'macro-brasil' },
+  { url: 'https://www.cartacapital.com.br/feed/',                            source: 'CartaCapital',       defaultCategory: 'macro-brasil' },
+  { url: 'https://www.nexojornal.com.br/feed',                               source: 'Nexo Jornal',        defaultCategory: 'macro-brasil' },
+  { url: 'https://oantagonista.com.br/feed/',                                source: 'O Antagonista',      defaultCategory: 'macro-brasil' },
+  { url: 'https://moneyreport.com.br/feed/',                                 source: 'Money Report',       defaultCategory: 'macro-brasil' },
+  { url: 'https://www.levante.com.br/feed/',                                 source: 'Levante',            defaultCategory: 'macro-brasil' },
+  { url: 'https://www.sunoresearch.com.br/noticias/feed/',                   source: 'Suno Research',      defaultCategory: 'macro-brasil' },
+
+  // ── Resultados de empresas (Groq vai classificar) ──────────────────────────
+  { url: 'https://ri.com.br/feed/',                                          source: 'RI.com.br',          defaultCategory: 'resultados'   },
+  { url: 'https://www.mzgroup.com.br/news/feed/',                            source: 'MZ Group',           defaultCategory: 'resultados'   },
+  { url: 'https://www.primorico.com.br/feed/',                               source: 'Primo Rico',         defaultCategory: 'resultados'   },
 
   // ── Política BR (Groq vai classificar como geopolítica) ───────────────────
   { url: 'https://www.poder360.com.br/feed/',                                source: 'Poder360',           defaultCategory: 'geopolitica'  },
@@ -45,13 +59,21 @@ const FEEDS: { url: string; source: string; defaultCategory: NewsCategory }[] = 
   { url: 'https://feeds.bbci.co.uk/news/business/rss.xml',                   source: 'BBC Business',       defaultCategory: 'macro-global' },
   { url: 'https://www.theguardian.com/business/economics/rss',               source: 'The Guardian Econ.', defaultCategory: 'macro-global' },
   { url: 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=20910258', source: 'CNBC Economy', defaultCategory: 'macro-global' },
+  { url: 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664', source: 'CNBC Markets', defaultCategory: 'macro-global' },
   { url: 'https://rss.nytimes.com/services/xml/rss/nyt/Economy.xml',         source: 'NYT Economy',        defaultCategory: 'macro-global' },
+  { url: 'https://www.project-syndicate.org/rss',                            source: 'Project Syndicate',  defaultCategory: 'macro-global' },
+  { url: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml',                    source: 'WSJ Markets',        defaultCategory: 'macro-global' },
+  { url: 'https://feeds.skynews.com/feeds/rss/business.xml',                 source: 'Sky News Business',  defaultCategory: 'macro-global' },
+  { url: 'https://www.ft.com/world?format=rss',                              source: 'FT World',           defaultCategory: 'macro-global' },
 
   // ── Geopolítica ───────────────────────────────────────────────────────────
   { url: 'https://feeds.reuters.com/reuters/worldNews',                      source: 'Reuters World',      defaultCategory: 'geopolitica'  },
   { url: 'https://feeds.bbci.co.uk/news/world/rss.xml',                      source: 'BBC World',          defaultCategory: 'geopolitica'  },
   { url: 'https://www.theguardian.com/world/rss',                            source: 'The Guardian World', defaultCategory: 'geopolitica'  },
   { url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml',           source: 'NYT World',          defaultCategory: 'geopolitica'  },
+  { url: 'https://www.aljazeera.com/xml/rss/all.xml',                        source: 'Al Jazeera',         defaultCategory: 'geopolitica'  },
+  { url: 'https://rss.dw.com/rdf/rss-bra-pol',                               source: 'DW Brasil',          defaultCategory: 'geopolitica'  },
+  { url: 'https://foreignpolicy.com/feed/',                                  source: 'Foreign Policy',     defaultCategory: 'geopolitica'  },
 ]
 
 const SKIP_KW = [

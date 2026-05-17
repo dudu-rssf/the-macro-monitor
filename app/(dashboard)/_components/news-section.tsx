@@ -10,18 +10,21 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: 'macro-brasil',  label: 'Macro Brasil' },
   { key: 'macro-global',  label: 'Macro Global' },
   { key: 'geopolitica',   label: 'Geopolítica'  },
+  { key: 'resultados',    label: 'Resultados'   },
 ]
 
 const CATEGORY_COLOR: Record<NewsCategory, string> = {
   'macro-brasil': 'bg-blue-500/15 text-blue-400',
   'macro-global': 'bg-amber-500/15 text-amber-400',
   'geopolitica':  'bg-red-500/15 text-red-400',
+  'resultados':   'bg-emerald-500/15 text-emerald-400',
 }
 
 const CATEGORY_LABEL: Record<NewsCategory, string> = {
   'macro-brasil': 'Macro BR',
   'macro-global': 'Global',
   'geopolitica':  'Geopolítica',
+  'resultados':   'Resultados',
 }
 
 function todayBRT(): string {
@@ -84,8 +87,8 @@ export function NewsSection() {
       })
     : allNews
 
-  const displayNews = todayNews.length >= 3 ? todayNews : allNews.slice(0, 20)
-  const filtered    = filter === 'tudo' ? displayNews : displayNews.filter(n => n.category === filter)
+  const displayNews = todayNews.length >= 3 ? todayNews : allNews.slice(0, 60)
+  const filtered    = (filter === 'tudo' ? displayNews : displayNews.filter(n => n.category === filter)).slice(0, 25)
 
   return (
     <div className="flex flex-col gap-3">

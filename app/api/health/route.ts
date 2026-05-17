@@ -40,10 +40,15 @@ export async function GET() {
     }),
 
     check('BCB Focus (Olinda)', 'APIs de Dados', async () => {
-      const p = new URLSearchParams({ '$format': 'json', '$top': '1' })
+      const p = new URLSearchParams({
+        '$format': 'json',
+        '$top':    '1',
+        '$select': 'Indicador,Data,Mediana',
+        '$filter': "Indicador eq 'IPCA'",
+      })
       const res = await fetch(
-        `https://olinda.bcb.gov.br/olinda/servico/Expectativas/versao/v1/odata/ExpectativaMercadoSelic?${p.toString()}`,
-        { signal: AbortSignal.timeout(8_000) }
+        `https://olinda.bcb.gov.br/olinda/servico/Expectativas/versao/v1/odata/ExpectativasMercadoAnuais?${p.toString()}`,
+        { signal: AbortSignal.timeout(10_000) }
       )
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
     }),

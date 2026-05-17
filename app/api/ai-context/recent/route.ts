@@ -1,16 +1,45 @@
 import { NextResponse } from 'next/server'
-import { getSeriesLatestTwo } from '@/db/queries'
+import { getSeriesHistory } from '@/db/queries'
 
 export const dynamic = 'force-dynamic'
 
-function v(n: number | null | undefined, dec = 2): string {
-  return n != null ? n.toFixed(dec) : '—'
-}
+// Todas as séries do site — quanto mais, melhor a detecção de outliers
+const SERIES = [
+  // Inflação
+  { code: '433',   label: 'IPCA mensal',           unit: '% m/m',  dec: 2 },
+  { code: '13522', label: 'IPCA acum. 12 meses',   unit: '%',      dec: 2 },
+  { code: '4449',  label: 'IPCA-15 mensal',        unit: '% m/m',  dec: 2 },
+  { code: '16121', label: 'Núcleo IPCA médias simples', unit: '% m/m', dec: 2 },
+  { code: '27838', label: 'Núcleo IPCA médias aparadas', unit: '% m/m', dec: 2 },
+  { code: '27839', label: 'Núcleo IPCA EX',        unit: '% m/m',  dec: 2 },
+  { code: '11427', label: 'Núcleo IPCA DP',        unit: '% m/m',  dec: 2 },
+  { code: '28750', label: 'Núcleo IPCA P55',       unit: '% m/m',  dec: 2 },
+  { code: '188',   label: 'IGP-M mensal',          unit: '% m/m',  dec: 2 },
+  { code: '4466',  label: 'INPC mensal',           unit: '% m/m',  dec: 2 },
+  // Atividade
+  { code: '22065', label: 'IBC-Br acum. 12m',      unit: '%',      dec: 2 },
+  { code: '7326',  label: 'PIB var. trimestral',   unit: '%',      dec: 2 },
+  // Trabalho
+  { code: '24369', label: 'Desemprego PNAD',       unit: '%',      dec: 1 },
+  { code: '24380', label: 'Rendimento real médio', unit: 'R$',     dec: 0 },
+  { code: '28763', label: 'CAGED saldo',           unit: 'vagas',  dec: 0 },
+  // Política monetária / fiscal
+  { code: '1178',  label: 'Selic',                unit: '% a.a.', dec: 2 },
+  { code: '4513',  label: 'DLSP % PIB',           unit: '% PIB',  dec: 2 },
+  { code: '5788',  label: 'Resultado primário',   unit: '% PIB',  dec: 2 },
+  // Setor externo / crédito
+  { code: '10813', label: 'USD/BRL',              unit: 'R$',     dec: 2 },
+  { code: '11752', label: 'EMBI+',               unit: 'pb',     dec: 0 },
+  { code: '3546',  label: 'Reservas internacionais', unit: 'US$ bi', dec: 0 },
+  { code: '22701', label: 'Balança comercial',    unit: 'US$ mi', dec: 0 },
+  { code: '21082', label: 'Inadimplência',        unit: '%',      dec: 2 },
+  { code: '20634', label: 'Spread bancário',      unit: 'pp',     dec: 2 },
+]
 
-function delta(latest: number | null | undefined, prev: number | null | undefined, dec = 2): string {
-  if (latest == null || prev == null) return 'n.d.'
-  const d = latest - prev
-  return (d >= 0 ? '+' : '') + d.toFixed(dec)
+function stats(values: number[]): { mean: number; std: number } {
+  const mean = values.reduce((a, b) => a + b, 0) / values.length
+  const std  = Math.sqrt(values.reduce((a, b) => a + (b - mean) ** 2, 0) / values.length)
+  return { mean, std }
 }
 
 async function fetchFocusIPCA(refMonth: string): Promise<number | null> {
@@ -22,8 +51,10 @@ async function fetchFocusIPCA(refMonth: string): Promise<number | null> {
       '$select':  'Mediana',
       '$filter':  `Indicador eq 'IPCA' and DataReferencia eq '${refMonth}' and baseCalculo eq 0`,
     })
-    const url = `https://olinda.bcb.gov.br/olinda/servico/Expectativas/versao/v1/odata/ExpectativaMercadoMensais?${p.toString()}`
-    const res = await fetch(url, { signal: AbortSignal.timeout(6_000) })
+    const res = await fetch(
+      `https://olinda.bcb.gov.br/olinda/servico/Expectativas/versao/v1/odata/ExpectativaMercadoMensais?${p.toString()}`,
+      { signal: AbortSignal.timeout(6_000) }
+    )
     if (!res.ok) return null
     const json = await res.json()
     return json.value?.[0]?.Mediana ?? null
@@ -34,88 +65,62 @@ async function fetchFocusIPCA(refMonth: string): Promise<number | null> {
 
 export async function GET() {
   try {
-    const [ipca12m, ipcaMensal, selic, desemprego, ibcBr, cambio, embi, inadim, rendimento] =
-      await Promise.all([
-        getSeriesLatestTwo('13522'),  // IPCA 12m
-        getSeriesLatestTwo('433'),    // IPCA mensal
-        getSeriesLatestTwo('1178'),   // Selic
-        getSeriesLatestTwo('24369'),  // Desemprego PNAD
-        getSeriesLatestTwo('22065'),  // IBC-Br 12m
-        getSeriesLatestTwo('10813'),  // USD/BRL
-        getSeriesLatestTwo('11752'),  // EMBI+
-        getSeriesLatestTwo('21082'),  // Inadimplência
-        getSeriesLatestTwo('24380'),  // Rendimento real médio
-      ])
+    // Fetch last 13 points for each series (1 latest + 12 historical for avg/std)
+    const histories = await Promise.all(
+      SERIES.map(s => getSeriesHistory(s.code, 13).catch(() => null))
+    )
 
-    // BCB Focus expectation for the latest IPCA month
+    // BCB Focus expectation for IPCA
+    const ipcaIdx = SERIES.findIndex(s => s.code === '433')
     let focusIPCA: number | null = null
-    if (ipcaMensal?.latest.date) {
-      const d = new Date(ipcaMensal.latest.date + 'T12:00:00')
+    if (histories[ipcaIdx]?.data?.length) {
+      const latestDate = histories[ipcaIdx]!.data.at(-1)!.date
+      const d = new Date(latestDate + 'T12:00:00')
       const refMonth = `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
       focusIPCA = await fetchFocusIPCA(refMonth)
     }
 
-    const lines = [
-      ipcaMensal
-        ? `• IPCA mensal (${ipcaMensal.latest.date.slice(0, 7)}): ${v(ipcaMensal.latest.value)}% m/m` +
-          (ipcaMensal.previous ? ` | anterior: ${v(ipcaMensal.previous.value)}%` : '') +
-          (focusIPCA != null ? ` | expectativa Focus: ${v(focusIPCA)}%` : '')
-        : null,
+    // Build analysis lines: latest, avg12m, deviation, z-score
+    const lines: string[] = []
+    for (let i = 0; i < SERIES.length; i++) {
+      const spec = SERIES[i]
+      const h    = histories[i]
+      if (!h || h.data.length < 2) continue
 
-      ipca12m
-        ? `• IPCA 12 meses: ${v(ipca12m.latest.value)}%` +
-          (ipca12m.previous ? ` | anterior: ${v(ipca12m.previous.value)}% | variação: ${delta(ipca12m.latest.value, ipca12m.previous.value)}pp` : '')
-        : null,
+      const sorted  = [...h.data].sort((a, b) => a.date.localeCompare(b.date))
+      const latest  = sorted.at(-1)!
+      const hist12  = sorted.slice(-13, -1) // up to 12 prev points
+      if (hist12.length === 0) continue
 
-      selic
-        ? `• Selic: ${v(selic.latest.value)}% a.a.` +
-          (selic.previous ? ` | anterior: ${v(selic.previous.value)}%` : '')
-        : null,
+      const histVals = hist12.map(p => p.value)
+      const { mean, std } = stats(histVals)
+      const dev   = latest.value - mean
+      const zRaw  = std > 0 ? dev / std : 0
+      const z     = parseFloat(zRaw.toFixed(2))
+      const devSign = dev >= 0 ? '+' : ''
 
-      desemprego
-        ? `• Taxa de desemprego PNAD (${desemprego.latest.date.slice(0, 7)}): ${v(desemprego.latest.value, 1)}%` +
-          (desemprego.previous ? ` | anterior: ${v(desemprego.previous.value, 1)}% | variação: ${delta(desemprego.latest.value, desemprego.previous.value, 1)}pp` : '')
-        : null,
+      let line = `• ${spec.label} (${latest.date.slice(0, 7)}): ${latest.value.toFixed(spec.dec)} ${spec.unit}`
+      line += ` | média 12m: ${mean.toFixed(spec.dec)} | desvio: ${devSign}${dev.toFixed(spec.dec)} | z-score: ${z}`
 
-      ibcBr
-        ? `• IBC-Br 12 meses (${ibcBr.latest.date.slice(0, 7)}): ${v(ibcBr.latest.value)}%` +
-          (ibcBr.previous ? ` | anterior: ${v(ibcBr.previous.value)}% | variação: ${delta(ibcBr.latest.value, ibcBr.previous.value)}pp` : '')
-        : null,
+      // IPCA: compare with Focus
+      if (spec.code === '433' && focusIPCA !== null) {
+        const surprise = latest.value - focusIPCA
+        line += ` | expectativa Focus: ${focusIPCA.toFixed(spec.dec)} | surpresa: ${surprise >= 0 ? '+' : ''}${surprise.toFixed(spec.dec)}`
+      }
 
-      cambio
-        ? `• USD/BRL: R$ ${v(cambio.latest.value)} (${cambio.latest.date.slice(0, 10)})` +
-          (cambio.previous ? ` | anterior: R$ ${v(cambio.previous.value)} | variação: ${delta(cambio.latest.value, cambio.previous.value)}` : '')
-        : null,
+      lines.push(line)
+    }
 
-      embi
-        ? `• EMBI+ (${embi.latest.date.slice(0, 10)}): ${v(embi.latest.value, 0)} pb` +
-          (embi.previous ? ` | anterior: ${v(embi.previous.value, 0)} pb | variação: ${delta(embi.latest.value, embi.previous.value, 0)}pb` : '')
-        : null,
+    const prompt = `Você é um economista brasileiro sênior. Analise os dados abaixo de TODOS os indicadores do site e identifique os outliers mais relevantes — ou seja, os dados que vieram significativamente acima ou abaixo da média recente.
 
-      inadim
-        ? `• Inadimplência bancária: ${v(inadim.latest.value)}%` +
-          (inadim.previous ? ` | anterior: ${v(inadim.previous.value)}% | variação: ${delta(inadim.latest.value, inadim.previous.value)}pp` : '')
-        : null,
+Critério de outlier: z-score acima de 1,5 ou abaixo de -1,5 em magnitude. Quando disponível, priorize também surpresas em relação à expectativa Focus do IPCA.
 
-      rendimento
-        ? `• Rendimento médio real: R$ ${v(rendimento.latest.value, 0)}` +
-          (rendimento.previous ? ` | anterior: R$ ${v(rendimento.previous.value, 0)}` : '')
-        : null,
-    ].filter(Boolean).join('\n')
+Escreva de 5 a 7 bullets em português, focados nos destaques mais relevantes agora. Seja específico: mencione o dado, o valor atual, a média histórica e o que isso significa na prática. Se não houver outlier significativo em alguma área, foque nos dados que mais se distanciam do padrão.
 
-    const prompt = `Você é um economista brasileiro sênior. Analise os dados econômicos recentes abaixo e gere de 5 a 7 bulletpoints em português sobre os desenvolvimentos mais relevantes e surpreendentes.
+Cada linha começa com "•". Sem título ou introdução.
 
-Foco: destaque variações significativas, dados acima ou abaixo do esperado (use a expectativa Focus quando disponível), inversões de tendência, e o que está mais chamando atenção agora. Seja específico com números e datas.
-
-Regras:
-- Português claro, acessível mas preciso
-- Mencione os números e datas explicitamente
-- Destaque surpresas, outliers e o que mais importa entender no momento
-- Comece cada linha com "•" e nada mais antes do texto
-- Não inclua título, introdução ou conclusão
-
-Dados mais recentes (latest vs anterior):
-${lines}`
+Dados (latest | média 12m | desvio | z-score):
+${lines.join('\n')}`
 
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -126,15 +131,15 @@ ${lines}`
       body: JSON.stringify({
         model:       'llama-3.3-70b-versatile',
         messages:    [{ role: 'user', content: prompt }],
-        temperature: 0.3,
-        max_tokens:  700,
+        temperature: 0.2,
+        max_tokens:  800,
       }),
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(25_000),
     })
 
     if (!res.ok) return NextResponse.json({ bullets: [], generatedAt: null })
 
-    const data = await res.json()
+    const data    = await res.json()
     const text: string = data.choices?.[0]?.message?.content ?? ''
     const bullets = text
       .split('\n')
