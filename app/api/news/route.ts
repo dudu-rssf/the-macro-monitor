@@ -37,14 +37,14 @@ async function enrichWithGroq(items: NewsItem[]): Promise<NewsItem[]> {
     body: JSON.stringify({
       model:           'llama-3.3-70b-versatile',
       temperature:     0.1,
-      max_tokens:      3000,
+      max_tokens:      6000,
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: GROQ_SYSTEM },
         { role: 'user',   content: `Notícias:\n${JSON.stringify(payload)}` },
       ],
     }),
-    signal: AbortSignal.timeout(30_000),
+    signal: AbortSignal.timeout(45_000),
   })
 
   if (!res.ok) throw new Error(`Groq ${res.status}`)
@@ -71,7 +71,7 @@ export async function GET() {
     return NextResponse.json([])
   }
 
-  const batch = raw.slice(0, 30)
+  const batch = raw.slice(0, 60)
 
   try {
     const enriched = await enrichWithGroq(batch)
