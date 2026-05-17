@@ -1,6 +1,6 @@
 import { db } from './client'
 import { macroSeriesMeta, macroSeriesData } from './schema'
-import { eq, desc } from 'drizzle-orm'
+import { eq, desc, and, gte } from 'drizzle-orm'
 
 export interface SeriesPoint {
   date: string   // YYYY-MM-DD
@@ -44,6 +44,42 @@ export async function getSeriesHistory(
     frequency: meta.frequency,
     area: meta.area,
     data: rows.reverse().map((r) => ({
+      date: r.date as string,
+      value: parseFloat(r.value as string),
+    })),
+  }
+}
+
+export async function getSeriesHistoryFrom(
+  sourceCode: string,
+  from: Date
+): Promise<SeriesResult | null> {
+  const [meta] = await db
+    .select()
+    .from(macroSeriesMeta)
+    .where(eq(macroSeriesMeta.sourceCode, sourceCode))
+    .limit(1)
+
+  if (!meta) return null
+
+  const fromStr = from.toISOString().split('T')[0]
+  const rows = await db
+    .select({ date: macroSeriesData.date, value: macroSeriesData.value })
+    .from(macroSeriesData)
+    .where(and(
+      eq(macroSeriesData.seriesId, meta.id),
+      gte(macroSeriesData.date, fromStr)
+    ))
+    .orderBy(macroSeriesData.date)
+
+  return {
+    id: meta.id,
+    sourceCode: meta.sourceCode,
+    name: meta.name,
+    unit: meta.unit,
+    frequency: meta.frequency,
+    area: meta.area,
+    data: rows.map((r) => ({
       date: r.date as string,
       value: parseFloat(r.value as string),
     })),
