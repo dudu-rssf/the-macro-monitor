@@ -220,6 +220,20 @@ async function enrichWithAI(items: NewsItem[]): Promise<NewsItem[]> {
     .filter((n): n is NewsItem => n !== null)
 }
 
+// Keywords para filtrar fallback quando IA falha — aceita notícia br genérica só se for claramente econômica
+const ECON_KW = [
+  'ipca', 'selic', 'pib', 'inflação', 'copom', 'banco central', 'caged', 'pnad',
+  'fiscal', 'câmbio', 'dólar', 'juros', 'taxa', 'mercado', 'bolsa', 'ação ',
+  'resultado', 'lucro', 'receita', 'dividendo', 'exportação', 'importação',
+  'balança comercial', 'petróleo', 'commodit', 'brent', 'fed ', 'federal reserve',
+  'juro', 'emprego', 'desemprego', 'rendimento', 'salário', 'recessão',
+]
+
+function hasEconKeyword(title: string, desc: string): boolean {
+  const t = (title + ' ' + desc).toLowerCase()
+  return ECON_KW.some(k => t.includes(k))
+}
+
 export async function GET() {
   let raw: NewsItem[] = []
   try {
@@ -228,12 +242,17 @@ export async function GET() {
     return NextResponse.json([])
   }
 
-  const batch = raw.slice(0, 60)
+  const batch = raw.slice(0, 40)
 
   try {
     const enriched = await enrichWithAI(batch)
     return NextResponse.json(enriched)
   } catch {
-    return NextResponse.json([])
+    // IA falhou — retorna fallback com defaultCategory, mas filtra fontes genéricas brasileiras
+    // (geopolitica / macro-global / resultados passam direto; macro-brasil só se tiver conteúdo econômico)
+    const fallback = batch.filter(n =>
+      n.category !== 'macro-brasil' || hasEconKeyword(n.title, n.description)
+    )
+    return NextResponse.json(fallback)
   }
 }

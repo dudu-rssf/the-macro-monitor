@@ -53,14 +53,14 @@ Regras:
 Dados mais recentes:
 ${contexto}`
 
-    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.GEMINI_API_KEY}`,
+        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gemini-2.0-flash',
+        model: 'llama-3.3-70b-versatile',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.3,
         max_tokens: 700,
@@ -91,8 +91,8 @@ ${contexto}`
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  if (!process.env.GEMINI_API_KEY) {
-    return NextResponse.json({ bullets: [], generatedAt: null, error: 'GEMINI_API_KEY não configurada no servidor.' })
+  if (!process.env.GROQ_API_KEY) {
+    return NextResponse.json({ bullets: [], generatedAt: null, error: 'GROQ_API_KEY não configurada no servidor.' })
   }
   try {
     const result = await compute()

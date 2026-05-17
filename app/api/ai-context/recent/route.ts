@@ -66,12 +66,10 @@ type Result = { bullets: string[]; generatedAt: string | null; error?: string }
 
 const compute = unstable_cache(
   async (): Promise<Result> => {
-    // Fetch last 13 points for each series (1 latest + 12 historical for avg/std)
     const histories = await Promise.all(
       SERIES.map(s => getSeriesHistory(s.code, 13).catch(() => null))
     )
 
-    // BCB Focus expectation for IPCA
     const ipcaIdx = SERIES.findIndex(s => s.code === '433')
     let focusIPCA: number | null = null
     if (histories[ipcaIdx]?.data?.length) {
@@ -81,7 +79,6 @@ const compute = unstable_cache(
       focusIPCA = await fetchFocusIPCA(refMonth)
     }
 
-    // Build analysis lines: latest, avg12m, deviation, z-score
     const lines: string[] = []
     for (let i = 0; i < SERIES.length; i++) {
       const spec = SERIES[i]
@@ -122,14 +119,14 @@ Cada linha começa com "•". Sem título ou introdução.
 Dados (latest | média 12m | desvio | z-score):
 ${lines.join('\n')}`
 
-    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.GEMINI_API_KEY}`,
+        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model:       'gemini-2.0-flash',
+        model:       'llama-3.3-70b-versatile',
         messages:    [{ role: 'user', content: prompt }],
         temperature: 0.2,
         max_tokens:  800,
@@ -160,8 +157,8 @@ ${lines.join('\n')}`
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  if (!process.env.GEMINI_API_KEY) {
-    return NextResponse.json({ bullets: [], generatedAt: null, error: 'GEMINI_API_KEY não configurada no servidor.' })
+  if (!process.env.GROQ_API_KEY) {
+    return NextResponse.json({ bullets: [], generatedAt: null, error: 'GROQ_API_KEY não configurada no servidor.' })
   }
   try {
     const result = await compute()
