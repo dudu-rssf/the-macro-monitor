@@ -7,6 +7,7 @@ import { SectionCard } from '@/components/macro/section-card'
 import { SectionDivider } from '@/components/macro/section-divider'
 import { RangeSelector } from '@/components/macro/range-selector'
 import { Glossary } from './glossary'
+import { FocusInflationSection } from './focus-section'
 import type { TimeRange, SeriesPoint } from '@/components/macro/types'
 
 export type { TimeRange }
@@ -272,6 +273,10 @@ export function InflationDashboard({ data, metaCentral, metaTeto }: Props) {
             unit="%" height={260} effectiveRange={range} />
         )}
       </SectionCard>
+
+      {/* ── SEÇÃO: FOCUS ────────────────────────────────────── */}
+      <SectionDivider title="Expectativas Focus" description="Boletim semanal de mercado (BCB) — mediana das instituições financeiras" />
+      <FocusInflationSection />
 
       {/* ── SEÇÃO: IGP-M ────────────────────────────────────── */}
       <SectionDivider title="IGP-M" description="Índice Geral de Preços — Mercado (FGV): IPA-M 60% + IPC-M 30% + INCC-M 10%" />
