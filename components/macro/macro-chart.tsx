@@ -57,7 +57,18 @@ function formatValue(value: number, unit: string) {
 // Rule: if all values ≥ 0 and min/max ≥ 0.65 → start near min (not at 0).
 // This prevents IBC-Br (90-120) from showing empty space below.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function computeYDomain(data: any[], seriesKeys: string[], refLineValues: number[], isBar: boolean): [number, number] | undefined {
+function computeYDomain(data: any[], seriesKeys: string[], refLineValues: number[], isBar: boolean, isStacked = false): [number, number] | undefined {
+  if (isBar && isStacked) {
+    // Stacked bars: domain must fit the total stack per date, not individual series max
+    const rowSums = data.map((row) =>
+      seriesKeys.reduce((sum, k) => sum + (typeof row[k] === 'number' ? (row[k] as number) : 0), 0)
+    )
+    const maxSum = Math.max(...rowSums, 0)
+    const minSum = Math.min(...rowSums, 0)
+    if (maxSum === minSum) return undefined
+    return [Math.min(0, minSum), maxSum * 1.05]
+  }
+
   const nums = data
     .flatMap((row) => seriesKeys.map((k) => row[k]))
     .filter((v): v is number => typeof v === 'number' && isFinite(v))
@@ -101,6 +112,7 @@ export function MacroChart({
     series.map((s) => s.key),
     referenceLines.map((r) => r.value),
     chartType === 'bar',
+    stacked,
   )
 
   const config: ChartConfig = Object.fromEntries(
