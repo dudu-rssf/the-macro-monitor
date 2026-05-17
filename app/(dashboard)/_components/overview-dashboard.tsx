@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowUpRight } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,7 +19,7 @@ interface OverviewData {
   rendimento:  Kv
   ipca12m:     Kv
   selic:       Kv
-  juroReal:    { value: number | null; prev: number | null; date?: string }
+  juroReal:    { value: number | null; prev: number | null; date?: string | null }
   dlsp:        Kv
   dbgg:        Kv
   primario:    Kv
@@ -29,8 +30,6 @@ interface OverviewData {
   embi:        Kv
   reservas:    Kv
 }
-
-interface Props { data: OverviewData }
 
 type Status = 'ok' | 'warn' | 'bad' | 'info'
 
@@ -57,7 +56,7 @@ function MetricRow({
   deltaInvert?: boolean
   status: Status
   customValue?: number | null
-  customDate?: string
+  customDate?: string | null
 }) {
   const val   = customValue  !== undefined ? customValue   : kv?.latest.value  ?? null
   const prev  = kv?.previous?.value ?? null
@@ -141,30 +140,54 @@ function statusFor(val: number | null, thresholds: { ok: number; warn: number; i
   }
 }
 
-export function OverviewDashboard({ data }: Props) {
-  const {
-    ibcBr12m, desemprego, rendimento,
-    ipca12m, selic, juroReal,
-    dlsp, dbgg, primario, primario12m,
-    inadim, spread, usdBrl, embi, reservas,
-  } = data
+function KpiSkeleton() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="h-36 rounded-lg bg-muted/40 animate-pulse" />
+      ))}
+    </div>
+  )
+}
 
-  const ipca12mVal     = ipca12m?.latest.value     ?? null
-  const selicVal       = selic?.latest.value        ?? null
-  const dlspVal        = dlsp?.latest.value         ?? null
-  const dbggVal        = dbgg?.latest.value         ?? null
-  const embiVal        = embi?.latest.value         ?? null
-  const inadimVal      = inadim?.latest.value       ?? null
-  const ibcBr12mVal    = ibcBr12m?.latest.value     ?? null
-  const desempregoVal  = desemprego?.latest.value   ?? null
-  const primario12mVal = primario12m?.latest.value  ?? null
+export function OverviewDashboard() {
+  const [data,    setData]    = useState<OverviewData | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  // Resultado primário sem desval já é NFSP — negamos pra resultado (positivo = superávit)
+  useEffect(() => {
+    fetch('/api/overview')
+      .then(r => r.json())
+      .then((d: OverviewData) => { setData(d); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  const ibcBr12m   = data?.ibcBr12m   ?? null
+  const desemprego = data?.desemprego  ?? null
+  const rendimento = data?.rendimento  ?? null
+  const ipca12m    = data?.ipca12m     ?? null
+  const selic      = data?.selic       ?? null
+  const juroReal   = data?.juroReal    ?? { value: null, prev: null, date: null }
+  const dlsp       = data?.dlsp        ?? null
+  const dbgg       = data?.dbgg        ?? null
+  const primario12m = data?.primario12m ?? null
+  const inadim     = data?.inadim      ?? null
+  const spread     = data?.spread      ?? null
+  const usdBrl     = data?.usdBrl      ?? null
+  const embi       = data?.embi        ?? null
+  const reservas   = data?.reservas    ?? null
+
+  const ipca12mVal    = ipca12m?.latest.value    ?? null
+  const selicVal      = selic?.latest.value       ?? null
+  const dlspVal       = dlsp?.latest.value        ?? null
+  const dbggVal       = dbgg?.latest.value        ?? null
+  const embiVal       = embi?.latest.value        ?? null
+  const inadimVal     = inadim?.latest.value      ?? null
+  const ibcBr12mVal   = ibcBr12m?.latest.value    ?? null
+  const desempregoVal = desemprego?.latest.value  ?? null
+  const primario12mVal = primario12m?.latest.value ?? null
+
   const resultadoPrimario = primario12mVal !== null ? -primario12mVal : null
-  const resultadoPrimarioPrev = primario12m?.previous?.value !== undefined && primario12m.previous !== null
-    ? -primario12m.previous.value : null
 
-  // Datas de referência
   const dates = [
     ibcBr12m?.latest.date, ipca12m?.latest.date, selic?.latest.date,
     dlsp?.latest.date, inadim?.latest.date, usdBrl?.latest.date,
@@ -222,121 +245,76 @@ export function OverviewDashboard({ data }: Props) {
       </div>
 
       {/* Grid de categorias */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      {loading ? <KpiSkeleton /> : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
 
-        {/* ── Atividade ─────────────────────────────────── */}
-        <CategoryCard title="Atividade" href="/atividade" accentColor="var(--chart-1)">
-          <MetricRow
-            label="IBC-Br variação 12 meses (proxy PIB)"
-            kv={ibcBr12m} unit="%" deltaUnit=" pp"
-            status={statusFor(ibcBr12mVal, { ok: 2.5, warn: 0, invert: false })}
-          />
-          <MetricRow
-            label="Taxa de desocupação — PNAD Contínua"
-            kv={desemprego} unit="%" deltaUnit=" pp" deltaInvert
-            status={statusFor(desempregoVal, { ok: 8, warn: 11, invert: true })}
-          />
-          <MetricRow
-            label="Rendimento médio real habitual"
-            kv={rendimento} unit=" R$" decimals={0}
-            status="info"
-          />
-        </CategoryCard>
+          <CategoryCard title="Atividade" href="/atividade" accentColor="var(--chart-1)">
+            <MetricRow label="IBC-Br variação 12 meses (proxy PIB)"
+              kv={ibcBr12m} unit="%" deltaUnit=" pp"
+              status={statusFor(ibcBr12mVal, { ok: 2.5, warn: 0 })} />
+            <MetricRow label="Taxa de desocupação — PNAD Contínua"
+              kv={desemprego} unit="%" deltaUnit=" pp" deltaInvert
+              status={statusFor(desempregoVal, { ok: 8, warn: 11, invert: true })} />
+            <MetricRow label="Rendimento médio real habitual"
+              kv={rendimento} unit=" R$" decimals={0} status="info" />
+          </CategoryCard>
 
-        {/* ── Inflação ──────────────────────────────────── */}
-        <CategoryCard title="Inflação" href="/inflacao" accentColor="var(--chart-3)">
-          <MetricRow
-            label="IPCA acumulado 12 meses"
-            kv={ipca12m} unit="%" deltaUnit=" pp" deltaInvert
-            status={statusFor(ipca12mVal, { ok: 3.25, warn: 4.5, invert: true })}
-          />
-          <MetricRow
-            label="Meta BCB 2025 (centro)"
-            kv={null} unit="%" status="info"
-            customValue={3.0} customDate={undefined}
-          />
-          <MetricRow
-            label="Teto da meta (banda ± 1,5 pp)"
-            kv={null} unit="%" status={statusFor(ipca12mVal, { ok: 4.5, warn: 4.5, invert: true })}
-            customValue={4.5} customDate={undefined}
-          />
-        </CategoryCard>
+          <CategoryCard title="Inflação" href="/inflacao" accentColor="var(--chart-3)">
+            <MetricRow label="IPCA acumulado 12 meses"
+              kv={ipca12m} unit="%" deltaUnit=" pp" deltaInvert
+              status={statusFor(ipca12mVal, { ok: 3.25, warn: 4.5, invert: true })} />
+            <MetricRow label="Meta BCB 2025 (centro)"
+              kv={null} unit="%" status="info" customValue={3.0} customDate={null} />
+            <MetricRow label="Teto da meta (banda ± 1,5 pp)"
+              kv={null} unit="%" status={statusFor(ipca12mVal, { ok: 4.5, warn: 4.5, invert: true })}
+              customValue={4.5} customDate={null} />
+          </CategoryCard>
 
-        {/* ── Política Monetária ────────────────────────── */}
-        <CategoryCard title="Política Monetária" href="/politica-monetaria" accentColor="var(--chart-2)">
-          <MetricRow
-            label="Taxa Selic (% ao ano)"
-            kv={selic} unit="% a.a." deltaUnit=" pp"
-            status="info"
-          />
-          <MetricRow
-            label="Juro real ex-post (Selic − IPCA 12m)"
-            customValue={juroReal.value}
-            customDate={juroReal.date}
-            kv={null} unit="%" deltaUnit=" pp"
-            status={statusFor(juroReal.value, { ok: 4, warn: 1, invert: false })}
-          />
-        </CategoryCard>
+          <CategoryCard title="Política Monetária" href="/politica-monetaria" accentColor="var(--chart-2)">
+            <MetricRow label="Taxa Selic (% ao ano)"
+              kv={selic} unit="% a.a." deltaUnit=" pp" status="info" />
+            <MetricRow label="Juro real ex-post (Selic − IPCA 12m)"
+              customValue={juroReal.value} customDate={juroReal.date}
+              kv={null} unit="%" deltaUnit=" pp"
+              status={statusFor(juroReal.value, { ok: 4, warn: 1 })} />
+          </CategoryCard>
 
-        {/* ── Fiscal ────────────────────────────────────── */}
-        <CategoryCard title="Fiscal" href="/fiscal" accentColor="var(--chart-4)">
-          <MetricRow
-            label="Dívida Líquida do Setor Público (% PIB)"
-            kv={dlsp} unit="% PIB" deltaUnit=" pp" deltaInvert
-            status={statusFor(dlspVal, { ok: 55, warn: 70, invert: true })}
-          />
-          <MetricRow
-            label="Dívida Bruta do Governo Geral (% PIB)"
-            kv={dbgg} unit="% PIB" deltaUnit=" pp" deltaInvert
-            status={statusFor(dbggVal, { ok: 75, warn: 90, invert: true })}
-          />
-          <MetricRow
-            label="Resultado primário sem desval. cambial (12m)"
-            customValue={resultadoPrimario}
-            customDate={primario12m?.latest.date}
-            kv={null} unit="% PIB" deltaUnit=" pp"
-            status={statusFor(resultadoPrimario, { ok: 0, warn: -0.25, invert: false })}
-          />
-        </CategoryCard>
+          <CategoryCard title="Fiscal" href="/fiscal" accentColor="var(--chart-4)">
+            <MetricRow label="Dívida Líquida do Setor Público (% PIB)"
+              kv={dlsp} unit="% PIB" deltaUnit=" pp" deltaInvert
+              status={statusFor(dlspVal, { ok: 55, warn: 70, invert: true })} />
+            <MetricRow label="Dívida Bruta do Governo Geral (% PIB)"
+              kv={dbgg} unit="% PIB" deltaUnit=" pp" deltaInvert
+              status={statusFor(dbggVal, { ok: 75, warn: 90, invert: true })} />
+            <MetricRow label="Resultado primário sem desval. cambial (12m)"
+              customValue={resultadoPrimario} customDate={primario12m?.latest.date}
+              kv={null} unit="% PIB" deltaUnit=" pp"
+              status={statusFor(resultadoPrimario, { ok: 0, warn: -0.25 })} />
+          </CategoryCard>
 
-        {/* ── Setor Externo ─────────────────────────────── */}
-        <CategoryCard title="Setor Externo" href="/externo" accentColor="var(--chart-5)">
-          <MetricRow
-            label="USD/BRL — PTAX venda"
-            kv={usdBrl} unit=" R$" deltaUnit=" R$" deltaInvert
-            status="info"
-          />
-          <MetricRow
-            label="EMBI+ Risco-Brasil (pontos-base)"
-            kv={embi} unit=" bps" deltaUnit=" bps" deltaInvert
-            status={statusFor(embiVal, { ok: 200, warn: 400, invert: true })}
-          />
-          <MetricRow
-            label="Reservas internacionais (US$ bilhões)"
-            kv={reservas} unit=" bi US$" decimals={0}
-            customValue={reservas?.latest.value !== undefined ? (reservas!.latest.value / 1000) : null}
-            customDate={reservas?.latest.date}
-            status="info"
-          />
-        </CategoryCard>
+          <CategoryCard title="Setor Externo" href="/externo" accentColor="var(--chart-5)">
+            <MetricRow label="USD/BRL — PTAX venda"
+              kv={usdBrl} unit=" R$" deltaUnit=" R$" deltaInvert status="info" />
+            <MetricRow label="EMBI+ Risco-Brasil (pontos-base)"
+              kv={embi} unit=" bps" deltaUnit=" bps" deltaInvert
+              status={statusFor(embiVal, { ok: 200, warn: 400, invert: true })} />
+            <MetricRow label="Reservas internacionais (US$ bilhões)"
+              kv={null} unit=" bi US$" decimals={0}
+              customValue={reservas?.latest.value != null ? reservas.latest.value / 1000 : null}
+              customDate={reservas?.latest.date} status="info" />
+          </CategoryCard>
 
-        {/* ── Crédito ───────────────────────────────────── */}
-        <CategoryCard title="Crédito" href="/credito" accentColor="hsl(280 65% 60%)">
-          <MetricRow
-            label="Taxa de inadimplência total (> 90 dias)"
-            kv={inadim} unit="%" deltaUnit=" pp" deltaInvert
-            status={statusFor(inadimVal, { ok: 3, warn: 5, invert: true })}
-          />
-          <MetricRow
-            label="Spread médio das operações de crédito"
-            kv={spread} unit=" p.p." deltaUnit=" p.p." deltaInvert
-            status="info"
-          />
-        </CategoryCard>
+          <CategoryCard title="Crédito" href="/credito" accentColor="hsl(280 65% 60%)">
+            <MetricRow label="Taxa de inadimplência total (> 90 dias)"
+              kv={inadim} unit="%" deltaUnit=" pp" deltaInvert
+              status={statusFor(inadimVal, { ok: 3, warn: 5, invert: true })} />
+            <MetricRow label="Spread médio das operações de crédito"
+              kv={spread} unit=" p.p." deltaUnit=" p.p." deltaInvert status="info" />
+          </CategoryCard>
 
-      </div>
+        </div>
+      )}
 
-      {/* Rodapé */}
       <p className="text-xs text-muted-foreground text-center pt-2">
         Fontes: BCB SGS, IBGE, FGV · Atualização automática às 07:00 e 19:00 BRT
       </p>

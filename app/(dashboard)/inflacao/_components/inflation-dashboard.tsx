@@ -245,10 +245,6 @@ export function InflationDashboard({ data, metaCentral, metaTeto }: Props) {
               { key: 'educacao',    label: 'Educação',                    color: 'hsl(200 80% 50%)' },
               { key: 'comunicacao', label: 'Comunicação',                 color: 'hsl(160 60% 45%)' },
             ]}
-            referenceLines={[
-              { value: metaCentral, label: `Meta ${metaCentral}%`, color: 'hsl(142 76% 40%)' },
-              { value: metaTeto,    label: `Teto ${metaTeto}%`,    color: 'hsl(0 72% 51%)' },
-            ]}
             unit="%" height={340} chartType="bar" stacked effectiveRange={range} />
         )}
       </SectionCard>
@@ -260,10 +256,6 @@ export function InflationDashboard({ data, metaCentral, metaTeto }: Props) {
               { key: 'cambio', label: 'Sensível ao Câmbio (Alimentação, Artigos de Residência, Transportes)', color: 'var(--chart-1)' },
               { key: 'renda',  label: 'Sensível à Renda (Saúde, Despesas Pessoais, Educação, Comunicação)',   color: 'var(--chart-3)' },
               { key: 'juros',  label: 'Sensível aos Juros (Habitação, Vestuário)',                             color: 'var(--chart-5)' },
-            ]}
-            referenceLines={[
-              { value: metaCentral, label: `Meta ${metaCentral}%`, color: 'hsl(142 76% 40%)' },
-              { value: metaTeto,    label: `Teto ${metaTeto}%`,    color: 'hsl(0 72% 51%)' },
             ]}
             unit="%" height={300} chartType="bar" stacked effectiveRange={range} />
         )}
