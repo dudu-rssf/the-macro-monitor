@@ -2,10 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight, TrendingUp, TrendingDown } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/components/macro/kpi-card'
 import type { SeriesPoint } from '@/components/macro/types'
+import { NewsSection } from './news-section'
+import { CalendarSection } from './calendar-section'
+import { AiContextSection } from './ai-context-section'
+import { ErrorBoundary } from './error-boundary'
 
 type Kv = { latest: SeriesPoint; previous: SeriesPoint | null } | null
 
@@ -38,6 +42,25 @@ const STATUS_DOT: Record<Status, string> = {
 
 function dot(status: Status) {
   return <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[status]}`} />
+}
+
+function calcDelta(kv: Kv): number | null {
+  if (!kv?.latest || !kv.previous) return null
+  return kv.latest.value - kv.previous.value
+}
+
+function TrendBadge({ delta, improvingWhenPositive }: { delta: number | null; improvingWhenPositive: boolean }) {
+  if (delta === null || delta === 0) return null
+  const improving = improvingWhenPositive ? delta > 0 : delta < 0
+  return improving ? (
+    <span className="flex items-center gap-0.5 text-[10px] font-mono text-emerald-400">
+      <TrendingUp className="w-3 h-3" /> Melhorando
+    </span>
+  ) : (
+    <span className="flex items-center gap-0.5 text-[10px] font-mono text-red-400">
+      <TrendingDown className="w-3 h-3" /> Piorando
+    </span>
+  )
 }
 
 function MetricRow({
@@ -92,8 +115,13 @@ function MetricRow({
   )
 }
 
-function CategoryCard({ title, href, accentColor, children }: {
-  title: string; href: string; accentColor: string; children: React.ReactNode
+function CategoryCard({ title, href, accentColor, children, trendDelta, improvingWhenPositive }: {
+  title: string
+  href: string
+  accentColor: string
+  children: React.ReactNode
+  trendDelta?: number | null
+  improvingWhenPositive?: boolean
 }) {
   return (
     <Link href={href} className="block group">
@@ -104,7 +132,12 @@ function CategoryCard({ title, href, accentColor, children }: {
               <div className="w-1.5 h-4 rounded-full" style={{ backgroundColor: accentColor }} />
               <CardTitle className="text-sm font-semibold">{title}</CardTitle>
             </div>
-            <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
+            <div className="flex items-center gap-2">
+              {trendDelta !== undefined && trendDelta !== null && improvingWhenPositive !== undefined && (
+                <TrendBadge delta={trendDelta} improvingWhenPositive={improvingWhenPositive} />
+              )}
+              <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
+            </div>
           </div>
         </CardHeader>
         <CardContent className="px-4 pb-3 pt-0">{children}</CardContent>
@@ -153,15 +186,25 @@ export function OverviewDashboard() {
   const embi        = data?.embi         ?? null
   const reservas    = data?.reservas     ?? null
 
-  const ipca12mVal    = ipca12m?.latest.value    ?? null
-  const dlspVal       = dlsp?.latest.value        ?? null
-  const dbggVal       = dbgg?.latest.value        ?? null
-  const embiVal       = embi?.latest.value        ?? null
-  const inadimVal     = inadim?.latest.value      ?? null
-  const ibcBr12mVal   = ibcBr12m?.latest.value    ?? null
-  const desempregoVal = desemprego?.latest.value  ?? null
+  const ipca12mVal     = ipca12m?.latest.value    ?? null
+  const dlspVal        = dlsp?.latest.value        ?? null
+  const dbggVal        = dbgg?.latest.value        ?? null
+  const embiVal        = embi?.latest.value        ?? null
+  const inadimVal      = inadim?.latest.value      ?? null
+  const ibcBr12mVal    = ibcBr12m?.latest.value    ?? null
+  const desempregoVal  = desemprego?.latest.value  ?? null
   const primario12mVal = primario12m?.latest.value ?? null
   const resultadoPrimario = primario12mVal !== null ? -primario12mVal : null
+
+  // Deltas para indicadores de tendência
+  const ibcBr12mDelta   = calcDelta(ibcBr12m)
+  const ipca12mDelta    = calcDelta(ipca12m)
+  const dlspDelta       = calcDelta(dlsp)
+  const embiDelta       = calcDelta(embi)
+  const inadimDelta     = calcDelta(inadim)
+  const primarioDelta   = primario12m?.previous
+    ? resultadoPrimario !== null ? resultadoPrimario - (-primario12m.previous.value) : null
+    : null
 
   const dates = [
     ibcBr12m?.latest.date, ipca12m?.latest.date, selic?.latest.date,
@@ -185,6 +228,31 @@ export function OverviewDashboard() {
         )}
       </div>
 
+      {/* Notícias | Calendário | IA */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+        <Card className="bg-card border-border">
+          <CardContent className="px-4 pt-4 pb-4 h-full">
+            <ErrorBoundary fallback="Erro ao carregar notícias.">
+              <NewsSection />
+            </ErrorBoundary>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardContent className="px-4 pt-4 pb-4 h-full">
+            <ErrorBoundary fallback="Erro ao carregar calendário.">
+              <CalendarSection />
+            </ErrorBoundary>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardContent className="px-4 pt-4 pb-4 h-full">
+            <ErrorBoundary fallback="Erro ao carregar análise de IA.">
+              <AiContextSection />
+            </ErrorBoundary>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="flex items-center gap-4 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">{dot('ok')}   <span>Favorável</span></div>
         <div className="flex items-center gap-1.5">{dot('warn')} <span>Atenção</span></div>
@@ -200,7 +268,8 @@ export function OverviewDashboard() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          <CategoryCard title="Atividade" href="/atividade" accentColor="var(--chart-1)">
+          <CategoryCard title="Atividade" href="/atividade" accentColor="var(--chart-1)"
+            trendDelta={ibcBr12mDelta} improvingWhenPositive={true}>
             <MetricRow label="IBC-Br variação 12 meses (proxy PIB)"
               kv={ibcBr12m} unit="%" deltaUnit=" pp"
               status={statusFor(ibcBr12mVal, { ok: 2.5, warn: 0 })} />
@@ -211,7 +280,8 @@ export function OverviewDashboard() {
               kv={rendimento} unit=" R$" decimals={0} status="info" />
           </CategoryCard>
 
-          <CategoryCard title="Inflação" href="/inflacao" accentColor="var(--chart-3)">
+          <CategoryCard title="Inflação" href="/inflacao" accentColor="var(--chart-3)"
+            trendDelta={ipca12mDelta} improvingWhenPositive={false}>
             <MetricRow label="IPCA acumulado 12 meses"
               kv={ipca12m} unit="%" deltaUnit=" pp" deltaInvert
               status={statusFor(ipca12mVal, { ok: 3.25, warn: 4.5, invert: true })} />
@@ -231,7 +301,8 @@ export function OverviewDashboard() {
               status={statusFor(juroReal.value, { ok: 4, warn: 1 })} />
           </CategoryCard>
 
-          <CategoryCard title="Fiscal" href="/fiscal" accentColor="var(--chart-4)">
+          <CategoryCard title="Fiscal" href="/fiscal" accentColor="var(--chart-4)"
+            trendDelta={dlspDelta} improvingWhenPositive={false}>
             <MetricRow label="Dívida Líquida do Setor Público (% PIB)"
               kv={dlsp} unit="% PIB" deltaUnit=" pp" deltaInvert
               status={statusFor(dlspVal, { ok: 55, warn: 70, invert: true })} />
@@ -244,7 +315,8 @@ export function OverviewDashboard() {
               status={statusFor(resultadoPrimario, { ok: 0, warn: -0.25 })} />
           </CategoryCard>
 
-          <CategoryCard title="Setor Externo" href="/externo" accentColor="var(--chart-5)">
+          <CategoryCard title="Setor Externo" href="/externo" accentColor="var(--chart-5)"
+            trendDelta={embiDelta} improvingWhenPositive={false}>
             <MetricRow label="USD/BRL — PTAX venda"
               kv={usdBrl} unit=" R$" deltaUnit=" R$" deltaInvert status="info" />
             <MetricRow label="EMBI+ Risco-Brasil (pontos-base)"
@@ -256,7 +328,8 @@ export function OverviewDashboard() {
               customDate={reservas?.latest.date} status="info" />
           </CategoryCard>
 
-          <CategoryCard title="Crédito" href="/credito" accentColor="hsl(280 65% 60%)">
+          <CategoryCard title="Crédito" href="/credito" accentColor="hsl(280 65% 60%)"
+            trendDelta={inadimDelta} improvingWhenPositive={false}>
             <MetricRow label="Taxa de inadimplência total (> 90 dias)"
               kv={inadim} unit="%" deltaUnit=" pp" deltaInvert
               status={statusFor(inadimVal, { ok: 3, warn: 5, invert: true })} />
