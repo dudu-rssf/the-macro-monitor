@@ -64,6 +64,10 @@ async function fetchFocusIPCA(refMonth: string): Promise<number | null> {
 }
 
 export async function GET() {
+  if (!process.env.GROQ_API_KEY) {
+    return NextResponse.json({ bullets: [], generatedAt: null, error: 'GROQ_API_KEY não configurada no servidor.' })
+  }
+
   try {
     // Fetch last 13 points for each series (1 latest + 12 historical for avg/std)
     const histories = await Promise.all(
@@ -137,7 +141,10 @@ ${lines.join('\n')}`
       signal: AbortSignal.timeout(25_000),
     })
 
-    if (!res.ok) return NextResponse.json({ bullets: [], generatedAt: null })
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '')
+      return NextResponse.json({ bullets: [], generatedAt: null, error: `Groq HTTP ${res.status}: ${errBody.slice(0, 120)}` })
+    }
 
     const data    = await res.json()
     const text: string = data.choices?.[0]?.message?.content ?? ''
@@ -149,7 +156,7 @@ ${lines.join('\n')}`
       .filter((l: string) => l.length > 20)
 
     return NextResponse.json({ bullets, generatedAt: new Date().toISOString() })
-  } catch {
-    return NextResponse.json({ bullets: [], generatedAt: null })
+  } catch (e) {
+    return NextResponse.json({ bullets: [], generatedAt: null, error: String(e).slice(0, 150) })
   }
 }

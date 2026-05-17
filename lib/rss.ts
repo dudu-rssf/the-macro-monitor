@@ -77,10 +77,21 @@ const FEEDS: { url: string; source: string; defaultCategory: NewsCategory }[] = 
 ]
 
 const SKIP_KW = [
-  'horóscopo', 'futebol', 'copa do', 'campeonato brasileiro', 'esporte', 'tênis',
-  ' morto', 'assassinato', 'ataque armado', 'bala perdida', 'acidente de tr',
+  // Esportes
+  'horóscopo', 'futebol', 'copa do', 'campeonato', 'esporte', 'tênis', 'fórmula 1',
+  'nba ', 'nfl ', 'transferência de jogador', 'atleta ', 'gol ',
+  // Crime / violência
+  ' morto', 'assassinato', 'ataque armado', 'bala perdida', 'acidente de tr', 'homicídio',
+  // Entretenimento
   'reality show', 'big brother', 'receita de', 'moda ', 'beleza ',
-  'série de tv', 'cinema ', 'oscar ', 'grammy', 'netflix ',
+  'série de tv', 'cinema ', 'oscar ', 'grammy', 'netflix ', 'festival de',
+  // Ciência / natureza / saúde
+  'nova espécie', 'descoberta científica', 'pesquisa científica', 'crosta terrestre',
+  'geolog', 'arqueolog', 'paleontolog', 'astronom', 'estudo revela que',
+  'temperatura do planeta', 'aquecimento global', 'mudança climática',
+  'vacina ', 'remédio ', 'medicamento ', 'tratamento médico',
+  // Tech irrelevante
+  'novo celular', 'lançamento de app', 'atualização do iphone',
 ]
 
 function shouldSkip(title: string, desc: string): boolean {

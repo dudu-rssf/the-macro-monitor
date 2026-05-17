@@ -8,6 +8,10 @@ function v(n: number | null | undefined, dec = 2): string {
 }
 
 export async function GET() {
+  if (!process.env.GROQ_API_KEY) {
+    return NextResponse.json({ bullets: [], generatedAt: null, error: 'GROQ_API_KEY não configurada no servidor.' })
+  }
+
   try {
     const [ipca, selic, desemprego, ibcBr, dlsp, dbgg, primario, usdBrl, embi, rendimento] =
       await Promise.all([
@@ -67,7 +71,10 @@ ${contexto}`
       signal: AbortSignal.timeout(20_000),
     })
 
-    if (!res.ok) return NextResponse.json({ bullets: [], generatedAt: null })
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '')
+      return NextResponse.json({ bullets: [], generatedAt: null, error: `Groq HTTP ${res.status}: ${errBody.slice(0, 120)}` })
+    }
 
     const data = await res.json()
     const text: string = data.choices?.[0]?.message?.content ?? ''
@@ -79,7 +86,7 @@ ${contexto}`
       .filter((l: string) => l.length > 20)
 
     return NextResponse.json({ bullets, generatedAt: new Date().toISOString() })
-  } catch {
-    return NextResponse.json({ bullets: [], generatedAt: null })
+  } catch (e) {
+    return NextResponse.json({ bullets: [], generatedAt: null, error: String(e).slice(0, 150) })
   }
 }
