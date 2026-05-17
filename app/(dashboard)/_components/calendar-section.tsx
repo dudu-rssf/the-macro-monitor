@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 
 type EventCategory =
   | 'inflacao'
@@ -114,19 +114,23 @@ function monthLabel(dateStr: string) {
 }
 
 export function CalendarSection() {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  const [todayStr, setTodayStr] = useState('')
+
+  useEffect(() => {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    setTodayStr(d.toISOString().slice(0, 10))
+  }, [])
 
   const { upcoming, past } = useMemo(() => {
+    if (!todayStr) return { upcoming: EVENTS.slice().sort((a, b) => a.date.localeCompare(b.date)), past: [] }
     const sorted = [...EVENTS].sort((a, b) => a.date.localeCompare(b.date))
-    const todayStr = today.toISOString().slice(0, 10)
     return {
       upcoming: sorted.filter(e => e.date >= todayStr),
       past:     sorted.filter(e => e.date <  todayStr).slice(-3).reverse(),
     }
-  }, [])  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [todayStr])
 
-  // Agrupa upcoming por mês
   const byMonth = useMemo(() => {
     const map = new Map<string, CalEvent[]>()
     for (const ev of upcoming) {
@@ -136,8 +140,6 @@ export function CalendarSection() {
     }
     return map
   }, [upcoming])
-
-  const todayStr = today.toISOString().slice(0, 10)
 
   return (
     <div className="flex flex-col gap-3">
