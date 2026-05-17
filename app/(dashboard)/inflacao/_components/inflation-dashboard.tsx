@@ -8,6 +8,7 @@ import { SectionDivider } from '@/components/macro/section-divider'
 import { RangeSelector } from '@/components/macro/range-selector'
 import { Glossary } from './glossary'
 import { FocusInflationSection } from './focus-section'
+import { ExpectativasSection } from './expectativas-section'
 import type { TimeRange, SeriesPoint } from '@/components/macro/types'
 
 export type { TimeRange }
@@ -326,6 +327,13 @@ export function InflationDashboard({ data, metaCentral, metaTeto }: Props) {
             unit="" height={280} effectiveRange={range} />
         )}
       </SectionCard>
+
+      {/* ── SEÇÃO: EXPECTATIVAS IMPLÍCITAS ──────────────────── */}
+      <SectionDivider
+        title="Expectativas de Mercado — Curvas Implícitas"
+        description="Inflação implícita (breakeven NTN-B vs NTN-F) e juros pré-fixados por prazo — dados ANBIMA intraday"
+      />
+      <ExpectativasSection />
 
       <Glossary />
     </div>
