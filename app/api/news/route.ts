@@ -6,22 +6,59 @@ export const revalidate = 900
 type GroqCategory = NewsCategory | 'irrelevante'
 interface GroqResult { id: string; category: GroqCategory; summary: string }
 
-// Categorias propositalmente amplas — Groq deve preferir macro quando em dúvida
-const GROQ_SYSTEM = `Você é um classificador e resumidor de notícias para um dashboard macroeconômico brasileiro.
+const GROQ_SYSTEM = `Você é um classificador rigoroso de notícias para um dashboard macroeconômico brasileiro. Existem APENAS 3 categorias válidas + irrelevante.
 
-Categorias (seja INCLUSIVO — prefira macro-brasil ou macro-global quando houver dúvida):
-- macro-brasil: qualquer notícia sobre a economia brasileira — inflação (IPCA/IGP/INPC), crescimento/PIB/IBC-Br, emprego/CAGED/PNAD, câmbio BRL, Selic/juros/BCB, crédito, setor externo, dívida pública, deficit fiscal, exportações, importações, atividade econômica, renda, commodities com efeito no Brasil, decisões do governo com impacto econômico
-- macro-global: qualquer notícia com impacto econômico global — Fed/BCE/BoJ e outros bancos centrais, inflação nos EUA/Europa/China, crescimento/recessão global, petróleo, minério de ferro, soja e demais commodities, tarifas/guerra comercial, dados econômicos de EUA/China/Europa, risco global, dólar índice
-- geopolitica-global: geopolítica sem foco econômico primário — conflitos armados, sanções políticas, eleições no exterior, diplomacia
-- politica-brasileira: política doméstica sem foco macro — Congresso, eleições 2026, STF, partidos, escândalos políticos, reformas políticas
-- negocios-brasil: empresas específicas — resultados trimestrais, fusões, IPOs, estratégia corporativa, demissões em empresa específica
-- irrelevante: crime, esportes, acidentes, clima, saúde individual, moda, entretenimento, horóscopo, concursos, impostos pessoa física, receitas
+══ DEFINIÇÕES PRECISAS ══
 
-REGRA: em caso de dúvida entre macro-brasil e politica-brasileira, escolha macro-brasil. Entre macro-global e geopolitica-global, escolha macro-global se houver qualquer dado econômico.
+macro-brasil — notícias cujo assunto PRINCIPAL é a economia brasileira:
+  ✓ Indicadores: IPCA, IGP-M, INPC, PIB, IBC-Br, CAGED, PNAD, Caged, desemprego BR
+  ✓ Política econômica BR: Selic, BCB, juros, câmbio BRL, crédito, spread bancário
+  ✓ Fiscal BR: dívida pública, deficit primário, reforma tributária com impacto macro
+  ✓ Setor externo BR: balança comercial, exportações, importações, reservas
+  ✓ Empresas quando o impacto é macroeconômico (ex: Petrobras eleva produção de petróleo, Vale bate recorde de exportação)
+  ✗ NÃO inclui: política partidária, eleições, STF sem impacto econômico direto
+  ✗ NÃO inclui: notícias de outros países mesmo que sobre economia
 
-Para cada notícia retorne:
-- "category": uma das categorias acima
-- "summary": 2-3 frases em português com os dados, números e impactos essenciais (string vazia se irrelevante)
+macro-global — notícias cujo assunto PRINCIPAL é a economia de outros países ou global:
+  ✓ Bancos centrais: Fed, BCE, BoJ, BoE e suas decisões de juros/política monetária
+  ✓ Dados econômicos: inflação EUA/Europa/China, PIB, emprego nos EUA
+  ✓ Commodities: petróleo (preço, produção OPEP), minério de ferro, soja, milho, cobre
+  ✓ Comércio global: tarifas, guerra comercial EUA-China, OMC com impacto em preços
+  ✓ Mercados globais: dólar índice DXY, bolsas globais, risco sistêmico, crise bancária
+  ✗ NÃO inclui: conflitos militares, eleições, diplomacia sem dado econômico explícito
+  ✗ NÃO inclui: notícias do Reino Unido, Golfo Pérsico, etc. sem dado econômico mensurável
+
+geopolitica — tudo o mais que seja relevante geopoliticamente:
+  ✓ Conflitos militares, guerras, tensões entre países
+  ✓ Eleições (qualquer país), transições de governo, golpes
+  ✓ Diplomacia, sanções políticas, acordos de segurança
+  ✓ Política interna brasileira: Congresso, STF, partidos, escândalos sem impacto macro direto
+  ✓ Notícias de países (Reino Unido, Golfo Pérsico, etc.) sem dado econômico claro
+
+irrelevante — descartar completamente:
+  ✓ Esportes, futebol, entretenimento, celebridades, cinema, séries
+  ✓ Crime comum, acidentes, polícia
+  ✓ Saúde pessoal, medicina, clima/tempo
+  ✓ Lifestyle, moda, gastronomia, turismo
+  ✓ Concursos públicos, ENEM, educação
+  ✓ Imposto de renda pessoa física, FGTS pessoa física
+  ✓ Obituários, aniversários, eventos culturais
+
+══ EXEMPLOS CRÍTICOS ══
+"Reino Unido eleva juros em 0,25 ponto" → macro-global (dado econômico explícito)
+"Eleições no Reino Unido: trabalhistas vencem" → geopolitica
+"Países do Golfo aumentam produção de petróleo" → macro-global (commodity)
+"Tensões no Golfo Pérsico ameaçam rotas marítimas" → geopolitica (sem dado econômico)
+"Petrobras anuncia lucro de R$ 40 bilhões" → macro-brasil
+"Lula sanciona reforma tributária" → macro-brasil (impacto econômico direto)
+"Lula e Lira discutem composição do Congresso" → geopolitica
+"Fed mantém juros em 4,5%" → macro-global
+"Trump impõe tarifa de 25% sobre aço" → macro-global
+
+══ FORMATO DE SAÍDA ══
+Para cada notícia:
+- "category": exatamente uma das 4 opções acima
+- "summary": 2-3 frases em português com dados, números e impactos concretos (vazio se irrelevante)
 
 Retorne APENAS JSON válido: {"items":[{"id":"...","category":"...","summary":"..."}]}`
 
@@ -36,12 +73,12 @@ async function enrichWithGroq(items: NewsItem[]): Promise<NewsItem[]> {
     },
     body: JSON.stringify({
       model:           'llama-3.3-70b-versatile',
-      temperature:     0.1,
+      temperature:     0.0,
       max_tokens:      6000,
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: GROQ_SYSTEM },
-        { role: 'user',   content: `Notícias:\n${JSON.stringify(payload)}` },
+        { role: 'user',   content: `Classifique e resuma as notícias abaixo:\n${JSON.stringify(payload)}` },
       ],
     }),
     signal: AbortSignal.timeout(45_000),
