@@ -171,11 +171,11 @@ export function InflationDashboard({ data, metaCentral, metaTeto }: Props) {
         <KpiCard title="IPCA Mensal" value={data.ipcaKv?.latest.value ?? null}
           date={data.ipcaKv?.latest.date}
           delta={data.ipcaKv?.previous ? data.ipcaKv.latest.value - data.ipcaKv.previous.value : null} deltaInvert />
-        <KpiCard title="IPCA Acumulado 12m" value={data.ipca12mKv?.latest.value ?? null}
+        <KpiCard title="IPCA Acumulado 12 Meses" value={data.ipca12mKv?.latest.value ?? null}
           date={data.ipca12mKv?.latest.date}
           delta={data.ipca12mKv?.previous ? data.ipca12mKv.latest.value - data.ipca12mKv.previous.value : null}
           badge={metaBadge} deltaInvert />
-        <KpiCard title="Nucleo IPCA (ap. c/ suav.)" value={data.nucleoMsKv?.latest.value ?? null}
+        <KpiCard title="Núcleo IPCA — Médias Aparadas com Suavização" value={data.nucleoMsKv?.latest.value ?? null}
           date={data.nucleoMsKv?.latest.date}
           delta={data.nucleoMsKv?.previous ? data.nucleoMsKv.latest.value - data.nucleoMsKv.previous.value : null} deltaInvert />
         <KpiCard title="IGP-M Mensal" value={data.igpmKv?.latest.value ?? null}
@@ -190,7 +190,7 @@ export function InflationDashboard({ data, metaCentral, metaTeto }: Props) {
         {(range) => (
           <MacroChart allData={panoramaData}
             series={[
-              { key: 'ipca12m', label: 'IPCA 12m',   color: 'var(--chart-1)' },
+              { key: 'ipca12m', label: 'IPCA (12 meses)',   color: 'var(--chart-1)' },
               { key: 'ipca',    label: 'IPCA Mensal', color: 'var(--chart-2)' },
               { key: 'ipca15',  label: 'IPCA-15',     color: 'var(--chart-4)' },
             ]}
@@ -284,7 +284,7 @@ export function InflationDashboard({ data, metaCentral, metaTeto }: Props) {
       {/* ── SEÇÃO: IGP-M ────────────────────────────────────── */}
       <SectionDivider title="IGP-M" description="Índice Geral de Preços — Mercado (FGV): IPA-M 60% + IPC-M 30% + INCC-M 10%" />
 
-      <SectionCard title="IGP-M e IGP-DI — variacao mensal (%)" sectionId="igpm" {...sectionProps}>
+      <SectionCard title="IGP-M e IGP-DI — variação mensal (%)" sectionId="igpm" {...sectionProps}>
         {(range) => (
           <MacroChart allData={igpmData}
             series={[
@@ -301,7 +301,7 @@ export function InflationDashboard({ data, metaCentral, metaTeto }: Props) {
             series={[
               { key: 'ipam',  label: 'IPA-M (atacado)',     color: 'var(--chart-2)' },
               { key: 'ipcm',  label: 'IPC-M (consumidor)',  color: 'var(--chart-4)' },
-              { key: 'inccm', label: 'INCC-M (construcao)', color: 'var(--chart-5)' },
+              { key: 'inccm', label: 'INCC-M (construção)',  color: 'var(--chart-5)' },
             ]}
             unit="%" height={260} effectiveRange={range} />
         )}
@@ -310,7 +310,7 @@ export function InflationDashboard({ data, metaCentral, metaTeto }: Props) {
       {/* ── SEÇÃO: COMMODITIES ──────────────────────────────── */}
       <SectionDivider title="Commodities" description="IC-Br (Índice de Commodities Brasil) — BCB. Antecipador de pressões inflacionárias via IPA-M" />
 
-      <SectionCard title="IC-Br Geral — nivel do indice" sectionId="icbr-geral" {...sectionProps}>
+      <SectionCard title="IC-Br Geral — nível do índice" sectionId="icbr-geral" {...sectionProps}>
         {(range) => (
           <MacroChart allData={data.icbrGeral.map((p) => ({ date: p.date, value: p.value }))}
             series={[{ key: 'value', label: 'IC-Br Geral', color: 'var(--chart-1)' }]}
@@ -318,11 +318,11 @@ export function InflationDashboard({ data, metaCentral, metaTeto }: Props) {
         )}
       </SectionCard>
 
-      <SectionCard title="IC-Br por componente — nivel do indice" sectionId="icbr-comp" {...sectionProps}>
+      <SectionCard title="IC-Br por componente — nível do índice" sectionId="icbr-comp" {...sectionProps}>
         {(range) => (
           <MacroChart allData={icbrCompData}
             series={[
-              { key: 'agro',    label: 'Agropecuario', color: 'var(--chart-2)' },
+              { key: 'agro',    label: 'Agropecuário',  color: 'var(--chart-2)' },
               { key: 'metal',   label: 'Metal',        color: 'var(--chart-4)' },
               { key: 'energia', label: 'Energia',      color: 'var(--chart-5)' },
             ]}

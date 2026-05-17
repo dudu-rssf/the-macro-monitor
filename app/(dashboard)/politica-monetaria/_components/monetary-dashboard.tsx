@@ -173,13 +173,13 @@ export function MonetaryDashboard({ data }: Props) {
       {/* ── SEÇÃO: JUROS ────────────────────────────────────── */}
       <SectionDivider title="Juros Nominais e Reais" description="Meta Selic, IPCA 12 meses e juro real ex-post" />
 
-      <SectionCard title="Selic x IPCA 12m — histórico (%)" sectionId="nominal" {...sectionProps}>
+      <SectionCard title="Taxa Selic e IPCA (12 meses) — histórico (%)" sectionId="nominal" {...sectionProps}>
         {(range) => (
           <MacroChart
             allData={nominalData}
             series={[
-              { key: 'selic',   label: 'Selic (a.a.)', color: 'var(--chart-1)' },
-              { key: 'ipca12m', label: 'IPCA 12m',     color: 'var(--chart-3)' },
+              { key: 'selic',   label: 'Taxa Selic (% a.a.)',     color: 'var(--chart-1)' },
+              { key: 'ipca12m', label: 'IPCA (12 meses)',          color: 'var(--chart-3)' },
             ]}
             unit="%" height={280} effectiveRange={range}
           />
@@ -200,11 +200,11 @@ export function MonetaryDashboard({ data }: Props) {
         )}
       </SectionCard>
 
-      <SectionCard title="DI Over — taxa mensal (% a.a.)" sectionId="di" {...sectionProps}>
+      <SectionCard title="DI Overnight — taxa mensal (% a.a.)" sectionId="di" {...sectionProps}>
         {(range) => (
           <MacroChart
             allData={data.diOver.map((p) => ({ date: p.date, value: p.value }))}
-            series={[{ key: 'value', label: 'DI Over', color: 'var(--chart-4)' }]}
+            series={[{ key: 'value', label: 'DI Overnight', color: 'var(--chart-4)' }]}
             unit="% a.a." height={220} effectiveRange={range}
           />
         )}
