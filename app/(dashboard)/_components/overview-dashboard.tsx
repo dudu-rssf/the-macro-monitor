@@ -8,6 +8,7 @@ import type { SeriesPoint } from '@/components/macro/types'
 import { NewsSection } from './news-section'
 import { CalendarSection } from './calendar-section'
 import { AiContextSection } from './ai-context-section'
+import { ErrorBoundary } from './error-boundary'
 
 type Kv = { latest: SeriesPoint; previous: SeriesPoint | null } | null
 
@@ -176,17 +177,23 @@ export function OverviewDashboard({ data }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
         <Card className="bg-card border-border">
           <CardContent className="px-4 pt-4 pb-4">
-            <NewsSection />
+            <ErrorBoundary fallback="Erro ao carregar notícias.">
+              <NewsSection />
+            </ErrorBoundary>
           </CardContent>
         </Card>
         <Card className="bg-card border-border">
           <CardContent className="px-4 pt-4 pb-4">
-            <CalendarSection />
+            <ErrorBoundary fallback="Erro ao carregar calendário.">
+              <CalendarSection />
+            </ErrorBoundary>
           </CardContent>
         </Card>
         <Card className="bg-card border-border">
           <CardContent className="px-4 pt-4 pb-4">
-            <AiContextSection />
+            <ErrorBoundary fallback="Erro ao carregar análise de IA.">
+              <AiContextSection />
+            </ErrorBoundary>
           </CardContent>
         </Card>
       </div>
