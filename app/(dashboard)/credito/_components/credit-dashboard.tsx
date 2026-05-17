@@ -13,14 +13,18 @@ interface CreditData {
   inadimKv:    { latest: SeriesPoint; previous: SeriesPoint | null } | null
   spreadKv:    { latest: SeriesPoint; previous: SeriesPoint | null } | null
   compRendaKv: { latest: SeriesPoint; previous: SeriesPoint | null } | null
-  total:       SeriesPoint[]   // 20631
-  pf:          SeriesPoint[]   // 20622
-  pj:          SeriesPoint[]   // 20623
-  inadimTotal: SeriesPoint[]   // 21082
-  inadimPf:    SeriesPoint[]   // 21084
-  inadimPj:    SeriesPoint[]   // 21086
-  spread:      SeriesPoint[]   // 20786
-  compRenda:   SeriesPoint[]   // 19882
+  total:        SeriesPoint[]   // 20631 Saldo total R$ mi
+  pf:           SeriesPoint[]   // 20622 Saldo PF R$ mi
+  pj:           SeriesPoint[]   // 20623 Saldo PJ R$ mi
+  inadimTotal:  SeriesPoint[]   // 21082 Inadimplência total %
+  inadimPf:     SeriesPoint[]   // 21084 Inadimplência PF %
+  inadimPj:     SeriesPoint[]   // 21086 Inadimplência PJ %
+  spread:       SeriesPoint[]   // 20786 Spread total p.p.
+  spreadPf:     SeriesPoint[]   // 20787 Spread PF p.p.
+  compRenda:    SeriesPoint[]   // 19882 Comprometimento renda %
+  taxaTotal:    SeriesPoint[]   // 20714 Taxa total % a.a.
+  taxaPf:       SeriesPoint[]   // 20751 Taxa PF % a.a.
+  endividamento: SeriesPoint[]  // 29037 Endividamento % renda bruta
 }
 
 interface Props { data: CreditData }
@@ -52,8 +56,11 @@ export function CreditDashboard({ data }: Props) {
 
   const sectionProps = { globalRange, sectionOverrides, onGlobalChange: handleGlobalChange, onSectionChange: handleSectionChange }
 
-  const saldoData    = mergeByDate({ pf: data.pf, pj: data.pj })
-  const inadimData   = mergeByDate({ total: data.inadimTotal, pf: data.inadimPf, pj: data.inadimPj })
+  const saldoSegData  = mergeByDate({ pf: data.pf, pj: data.pj })
+  const inadimData    = mergeByDate({ total: data.inadimTotal, pf: data.inadimPf, pj: data.inadimPj })
+  const spreadData    = mergeByDate({ total: data.spread, pf: data.spreadPf })
+  const taxaData      = mergeByDate({ total: data.taxaTotal, pf: data.taxaPf })
+  const endivData     = mergeByDate({ endividamento: data.endividamento, comprometimento: data.compRenda })
 
   const totalNow = data.totalKv?.latest.value ?? null
 
@@ -62,7 +69,7 @@ export function CreditDashboard({ data }: Props) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Crédito</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Saldo, inadimplência, spread e comprometimento de renda</p>
+          <p className="text-sm text-muted-foreground mt-0.5">Saldo, inadimplência, custo do crédito e endividamento das famílias</p>
         </div>
         <div className="flex flex-col items-end gap-1">
           <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Horizonte global</span>
@@ -72,7 +79,7 @@ export function CreditDashboard({ data }: Props) {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard
-          title="Saldo Total de Credito"
+          title="Saldo Total de Crédito"
           value={totalNow !== null ? totalNow / 1000 : null}
           unit=" bi R$"
           date={data.totalKv?.latest.date}
@@ -81,16 +88,16 @@ export function CreditDashboard({ data }: Props) {
           deltaInvert={false}
         />
         <KpiCard
-          title="Inadimplencia Total (>90d)"
+          title="Inadimplência Total (>90 dias)"
           value={data.inadimKv?.latest.value ?? null}
           unit="%"
           date={data.inadimKv?.latest.date}
           delta={data.inadimKv?.previous ? data.inadimKv.latest.value - data.inadimKv.previous.value : null}
-          deltaUnit="pp"
+          deltaUnit=" pp"
           deltaInvert
         />
         <KpiCard
-          title="Spread Medio (p.p.)"
+          title="Spread Médio das Operações"
           value={data.spreadKv?.latest.value ?? null}
           unit=" p.p."
           date={data.spreadKv?.latest.date}
@@ -104,74 +111,99 @@ export function CreditDashboard({ data }: Props) {
           unit="%"
           date={data.compRendaKv?.latest.date}
           delta={data.compRendaKv?.previous ? data.compRendaKv.latest.value - data.compRendaKv.previous.value : null}
-          deltaUnit="pp"
+          deltaUnit=" pp"
           deltaInvert
         />
       </div>
 
-      {/* ── SEÇÃO: SALDO ──────────────────────────────────── */}
-      <SectionDivider title="Saldo de Crédito" description="Estoque total de operações de crédito no sistema financeiro (R$ milhões)" />
+      {/* ── SEÇÃO: SALDO DE CRÉDITO ──────────────────────── */}
+      <SectionDivider title="Saldo de Crédito" description="Estoque total de operações de crédito no Sistema Financeiro Nacional (R$ milhões)" />
 
-      <SectionCard title="Saldo Total de Credito (R$ milhoes)" sectionId="saldo-total" {...sectionProps}>
+      <SectionCard title="Saldo Total de Crédito do Sistema Financeiro Nacional (R$ milhões)" sectionId="saldo-total" {...sectionProps}>
         {(range) => (
           <MacroChart
             allData={data.total.map((p) => ({ date: p.date, value: p.value }))}
-            series={[{ key: 'value', label: 'Saldo Total', color: 'var(--chart-1)' }]}
-            unit="" height={240} effectiveRange={range}
+            series={[{ key: 'value', label: 'Saldo Total de Crédito', color: 'var(--chart-1)' }]}
+            unit=" R$ mi" height={240} effectiveRange={range}
           />
         )}
       </SectionCard>
 
-      <SectionCard title="Saldo por Segmento — PF e PJ (R$ milhoes)" sectionId="saldo-seg" {...sectionProps}>
+      <SectionCard title="Saldo de Crédito por Segmento — Pessoa Física e Pessoa Jurídica (R$ milhões)" sectionId="saldo-seg" {...sectionProps}>
         {(range) => (
           <MacroChart
-            allData={saldoData}
+            allData={saldoSegData}
             series={[
-              { key: 'pf', label: 'Pessoa Fisica',   color: 'var(--chart-2)' },
-              { key: 'pj', label: 'Pessoa Juridica', color: 'var(--chart-4)' },
+              { key: 'pf', label: 'Pessoa Física',   color: 'var(--chart-2)' },
+              { key: 'pj', label: 'Pessoa Jurídica', color: 'var(--chart-4)' },
             ]}
-            unit="" height={260} effectiveRange={range}
+            unit=" R$ mi" height={260} effectiveRange={range}
           />
         )}
       </SectionCard>
 
       {/* ── SEÇÃO: INADIMPLÊNCIA ──────────────────────────── */}
-      <SectionDivider title="Inadimplência" description="Percentual da carteira com atraso acima de 90 dias" />
+      <SectionDivider title="Inadimplência" description="Percentual da carteira de crédito com atraso superior a 90 dias" />
 
-      <SectionCard title="Inadimplencia por segmento (%)" sectionId="inadim" {...sectionProps}>
+      <SectionCard title="Taxa de Inadimplência por Segmento (%, atraso > 90 dias)" sectionId="inadim" {...sectionProps}>
         {(range) => (
           <MacroChart
             allData={inadimData}
             series={[
-              { key: 'total', label: 'Total',          color: 'var(--chart-1)' },
-              { key: 'pf',    label: 'Pessoa Fisica',  color: 'var(--chart-2)' },
-              { key: 'pj',    label: 'Pessoa Juridica',color: 'var(--chart-4)' },
+              { key: 'total', label: 'Total do Sistema',    color: 'var(--chart-1)' },
+              { key: 'pf',    label: 'Pessoa Física',       color: 'var(--chart-2)' },
+              { key: 'pj',    label: 'Pessoa Jurídica',     color: 'var(--chart-4)' },
             ]}
             unit="%" height={280} effectiveRange={range}
           />
         )}
       </SectionCard>
 
-      {/* ── SEÇÃO: PREÇO DO CRÉDITO ───────────────────────── */}
-      <SectionDivider title="Preço e Comprometimento" description="Custo do crédito e impacto no orçamento das famílias" />
+      {/* ── SEÇÃO: CUSTO DO CRÉDITO ──────────────────────── */}
+      <SectionDivider title="Custo do Crédito" description="Taxas de juros e spread médio das operações de crédito do Sistema Financeiro Nacional" />
 
-      <SectionCard title="Spread Medio das Operacoes de Credito (p.p.)" sectionId="spread" {...sectionProps}>
+      <SectionCard title="Taxa de Juros Média das Operações de Crédito (% ao ano)" sectionId="taxa" {...sectionProps}>
         {(range) => (
           <MacroChart
-            allData={data.spread.map((p) => ({ date: p.date, value: p.value }))}
-            series={[{ key: 'value', label: 'Spread Medio', color: 'var(--chart-3)' }]}
+            allData={taxaData}
+            series={[
+              { key: 'total', label: 'Total do Sistema', color: 'var(--chart-1)' },
+              { key: 'pf',    label: 'Pessoa Física',    color: 'var(--chart-2)' },
+            ]}
+            unit="% a.a." height={260} effectiveRange={range}
+          />
+        )}
+      </SectionCard>
+
+      <SectionCard title="Spread Médio das Operações de Crédito (pontos percentuais)" sectionId="spread" {...sectionProps}>
+        {(range) => (
+          <MacroChart
+            allData={spreadData}
+            series={[
+              { key: 'total', label: 'Total do Sistema', color: 'var(--chart-3)' },
+              { key: 'pf',    label: 'Pessoa Física',    color: 'var(--chart-2)' },
+            ]}
             unit=" p.p." height={240} effectiveRange={range}
           />
         )}
       </SectionCard>
 
-      <SectionCard title="Comprometimento de Renda das Familias (%)" sectionId="comp-renda" {...sectionProps}>
+      {/* ── SEÇÃO: ENDIVIDAMENTO DAS FAMÍLIAS ────────────── */}
+      <SectionDivider title="Endividamento das Famílias" description="Carga financeira em relação à renda — indicador de vulnerabilidade das famílias brasileiras" />
+
+      <SectionCard
+        title="Endividamento e Comprometimento de Renda das Famílias (%)"
+        sectionId="endividamento"
+        {...sectionProps}
+      >
         {(range) => (
           <MacroChart
-            allData={data.compRenda.map((p) => ({ date: p.date, value: p.value }))}
-            series={[{ key: 'value', label: 'Comprometimento de Renda', color: 'var(--chart-5)' }]}
-            referenceLines={[{ value: 30, label: '30%', color: 'hsl(0 72% 51%)' }]}
-            unit="%" height={240} effectiveRange={range}
+            allData={endivData}
+            series={[
+              { key: 'endividamento',   label: 'Endividamento Total (% da renda bruta acumulada 12 meses)',       color: 'var(--chart-5)' },
+              { key: 'comprometimento', label: 'Comprometimento de Renda com Serviço da Dívida (%, com ajuste sazonal)', color: 'var(--chart-1)' },
+            ]}
+            unit="%" height={300} effectiveRange={range}
           />
         )}
       </SectionCard>
