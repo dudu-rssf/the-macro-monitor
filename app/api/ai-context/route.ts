@@ -84,7 +84,7 @@ ${contexto}`
 
     return { bullets, generatedAt: new Date().toISOString() }
   },
-  ['ai-context-geral'],
+  ['ai-context-geral-v2'],
   { revalidate: 86400, tags: ['ai-context'] },
 )
 

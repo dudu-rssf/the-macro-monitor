@@ -150,7 +150,7 @@ ${lines.join('\n')}`
 
     return { bullets, generatedAt: new Date().toISOString() }
   },
-  ['ai-context-recent'],
+  ['ai-context-recent-v2'],
   { revalidate: 86400, tags: ['ai-context'] },
 )
 

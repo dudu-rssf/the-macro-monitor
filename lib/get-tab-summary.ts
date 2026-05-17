@@ -167,6 +167,6 @@ ${histLines}`
 
 export const getTabSummary = unstable_cache(
   compute,
-  ['tab-ai-summary'],
+  ['tab-ai-summary-v2'],
   { revalidate: 86400, tags: ['tab-summary'] },
 )
