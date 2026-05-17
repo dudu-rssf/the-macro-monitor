@@ -7,6 +7,7 @@ import { formatDate } from '@/components/macro/kpi-card'
 import type { SeriesPoint } from '@/components/macro/types'
 import { NewsSection } from './news-section'
 import { CalendarSection } from './calendar-section'
+import { AiContextSection } from './ai-context-section'
 
 type Kv = { latest: SeriesPoint; previous: SeriesPoint | null } | null
 
@@ -171,8 +172,8 @@ export function OverviewDashboard({ data }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Seção superior — Notícias + Calendário */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Seção superior — Notícias | Calendário | IA */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
         <Card className="bg-card border-border">
           <CardContent className="px-4 pt-4 pb-4">
             <NewsSection />
@@ -181,6 +182,11 @@ export function OverviewDashboard({ data }: Props) {
         <Card className="bg-card border-border">
           <CardContent className="px-4 pt-4 pb-4">
             <CalendarSection />
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardContent className="px-4 pt-4 pb-4">
+            <AiContextSection />
           </CardContent>
         </Card>
       </div>
