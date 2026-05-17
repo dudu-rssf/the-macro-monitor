@@ -84,14 +84,14 @@ const TAB_NAMES: Record<string, string> = {
 }
 
 async function callGroq(prompt: string): Promise<string[]> {
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  const res = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+      Authorization: `Bearer ${process.env.GEMINI_API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model:       'llama-3.3-70b-versatile',
+      model:       'gemini-2.0-flash',
       messages:    [{ role: 'user', content: prompt }],
       temperature: 0.35,
       max_tokens:  600,
