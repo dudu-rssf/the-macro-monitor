@@ -1,23 +1,7 @@
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
-
-type EventCategory =
-  | 'inflacao'
-  | 'atividade'
-  | 'trabalho'
-  | 'politica-monetaria'
-  | 'fiscal'
-  | 'externo'
-  | 'credito'
-
-interface CalEvent {
-  date: string        // YYYY-MM-DD
-  name: string
-  detail: string
-  category: EventCategory
-  confirmed?: boolean // false = estimado
-}
+import { useState, useEffect } from 'react'
+import type { EnrichedEvent, EventCategory } from '@/app/api/calendar/route'
 
 const CATEGORY_STYLE: Record<EventCategory, string> = {
   'inflacao':           'bg-orange-500/15 text-orange-400',
@@ -39,73 +23,22 @@ const CATEGORY_LABEL: Record<EventCategory, string> = {
   'credito':            'Crédito',
 }
 
-// Calendário 2026 — fontes: BCB, IBGE, STN
-// Datas marcadas como confirmed=false são estimadas com base no histórico de divulgação
-const EVENTS: CalEvent[] = [
-  // ── Maio 2026 ──────────────────────────────────────────────────────────────
-  { date: '2026-05-08', name: 'IPCA',                  detail: 'ref. abr/2026',  category: 'inflacao',           confirmed: true  },
-  { date: '2026-05-14', name: 'IBC-Br',                detail: 'ref. mar/2026',  category: 'atividade',          confirmed: false },
-  { date: '2026-05-22', name: 'CAGED',                 detail: 'ref. abr/2026',  category: 'trabalho',           confirmed: false },
-  { date: '2026-05-26', name: 'Resultado Primário',    detail: 'ref. abr/2026',  category: 'fiscal',             confirmed: false },
-  { date: '2026-05-28', name: 'Balanço de Pagamentos', detail: 'ref. abr/2026',  category: 'externo',            confirmed: false },
-  { date: '2026-05-29', name: 'Nota de Crédito BCB',   detail: 'ref. abr/2026',  category: 'credito',            confirmed: false },
-
-  // ── Junho 2026 ─────────────────────────────────────────────────────────────
-  { date: '2026-06-10', name: 'IPCA',                  detail: 'ref. mai/2026',  category: 'inflacao',           confirmed: false },
-  { date: '2026-06-11', name: 'IBC-Br',                detail: 'ref. abr/2026',  category: 'atividade',          confirmed: false },
-  { date: '2026-06-16', name: 'COPOM — Decisão',       detail: 'reunião 120ª',   category: 'politica-monetaria', confirmed: true  },
-  { date: '2026-06-18', name: 'PNAD Contínua',         detail: 'T1 2026',        category: 'trabalho',           confirmed: false },
-  { date: '2026-06-18', name: 'PIB',                   detail: 'T1 2026',        category: 'atividade',          confirmed: false },
-  { date: '2026-06-24', name: 'CAGED',                 detail: 'ref. mai/2026',  category: 'trabalho',           confirmed: false },
-  { date: '2026-06-25', name: 'Resultado Primário',    detail: 'ref. mai/2026',  category: 'fiscal',             confirmed: false },
-  { date: '2026-06-25', name: 'DLSP / DBGG',           detail: 'ref. abr/2026',  category: 'fiscal',             confirmed: false },
-  { date: '2026-06-26', name: 'Balanço de Pagamentos', detail: 'ref. mai/2026',  category: 'externo',            confirmed: false },
-
-  // ── Julho 2026 ─────────────────────────────────────────────────────────────
-  { date: '2026-07-09', name: 'IPCA',                  detail: 'ref. jun/2026',  category: 'inflacao',           confirmed: false },
-  { date: '2026-07-14', name: 'IBC-Br',                detail: 'ref. mai/2026',  category: 'atividade',          confirmed: false },
-  { date: '2026-07-24', name: 'CAGED',                 detail: 'ref. jun/2026',  category: 'trabalho',           confirmed: false },
-  { date: '2026-07-28', name: 'COPOM — Decisão',       detail: 'reunião 121ª',   category: 'politica-monetaria', confirmed: true  },
-  { date: '2026-07-29', name: 'Resultado Primário',    detail: 'ref. jun/2026',  category: 'fiscal',             confirmed: false },
-  { date: '2026-07-30', name: 'Balanço de Pagamentos', detail: 'ref. jun/2026',  category: 'externo',            confirmed: false },
-
-  // ── Agosto 2026 ────────────────────────────────────────────────────────────
-  { date: '2026-08-13', name: 'IPCA',                  detail: 'ref. jul/2026',  category: 'inflacao',           confirmed: false },
-  { date: '2026-08-13', name: 'IBC-Br',                detail: 'ref. jun/2026',  category: 'atividade',          confirmed: false },
-  { date: '2026-08-20', name: 'PNAD Contínua',         detail: 'T2 2026',        category: 'trabalho',           confirmed: false },
-  { date: '2026-08-25', name: 'CAGED',                 detail: 'ref. jul/2026',  category: 'trabalho',           confirmed: false },
-  { date: '2026-08-27', name: 'Resultado Primário',    detail: 'ref. jul/2026',  category: 'fiscal',             confirmed: false },
-  { date: '2026-08-27', name: 'DLSP / DBGG',           detail: 'ref. jun/2026',  category: 'fiscal',             confirmed: false },
-
-  // ── Setembro 2026 ──────────────────────────────────────────────────────────
-  { date: '2026-09-10', name: 'IPCA',                  detail: 'ref. ago/2026',  category: 'inflacao',           confirmed: false },
-  { date: '2026-09-15', name: 'IBC-Br',                detail: 'ref. jul/2026',  category: 'atividade',          confirmed: false },
-  { date: '2026-09-15', name: 'COPOM — Decisão',       detail: 'reunião 122ª',   category: 'politica-monetaria', confirmed: true  },
-  { date: '2026-09-24', name: 'CAGED',                 detail: 'ref. ago/2026',  category: 'trabalho',           confirmed: false },
-  { date: '2026-09-25', name: 'PIB',                   detail: 'T2 2026',        category: 'atividade',          confirmed: false },
-
-  // ── Outubro 2026 ───────────────────────────────────────────────────────────
-  { date: '2026-10-08', name: 'IPCA',                  detail: 'ref. set/2026',  category: 'inflacao',           confirmed: false },
-  { date: '2026-10-14', name: 'IBC-Br',                detail: 'ref. ago/2026',  category: 'atividade',          confirmed: false },
-  { date: '2026-10-22', name: 'CAGED',                 detail: 'ref. set/2026',  category: 'trabalho',           confirmed: false },
-  { date: '2026-10-27', name: 'PNAD Contínua',         detail: 'T3 2026',        category: 'trabalho',           confirmed: false },
-
-  // ── Novembro 2026 ──────────────────────────────────────────────────────────
-  { date: '2026-11-04', name: 'COPOM — Decisão',       detail: 'reunião 123ª',   category: 'politica-monetaria', confirmed: true  },
-  { date: '2026-11-12', name: 'IPCA',                  detail: 'ref. out/2026',  category: 'inflacao',           confirmed: false },
-  { date: '2026-11-18', name: 'IBC-Br',                detail: 'ref. set/2026',  category: 'atividade',          confirmed: false },
-  { date: '2026-11-25', name: 'CAGED',                 detail: 'ref. out/2026',  category: 'trabalho',           confirmed: false },
-
-  // ── Dezembro 2026 ──────────────────────────────────────────────────────────
-  { date: '2026-12-09', name: 'IPCA',                  detail: 'ref. nov/2026',  category: 'inflacao',           confirmed: false },
-  { date: '2026-12-09', name: 'COPOM — Decisão',       detail: 'reunião 124ª',   category: 'politica-monetaria', confirmed: true  },
-  { date: '2026-12-10', name: 'IBC-Br',                detail: 'ref. out/2026',  category: 'atividade',          confirmed: false },
-  { date: '2026-12-16', name: 'PIB',                   detail: 'T3 2026',        category: 'atividade',          confirmed: false },
-]
-
 function fmt(dateStr: string) {
   const [y, m, d] = dateStr.split('-').map(Number)
   return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' }).format(new Date(y, m - 1, d))
+}
+
+function getISOWeekStart(date: Date): Date {
+  const d = new Date(date)
+  const day = d.getDay()
+  const diff = (day === 0 ? -6 : 1 - day)
+  d.setDate(d.getDate() + diff)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+function toDateStr(d: Date) {
+  return d.toISOString().slice(0, 10)
 }
 
 function monthLabel(dateStr: string) {
@@ -113,97 +46,169 @@ function monthLabel(dateStr: string) {
   return new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(new Date(y, m - 1, 1))
 }
 
-export function CalendarSection() {
-  const [todayStr, setTodayStr] = useState('')
-
-  useEffect(() => {
-    const d = new Date()
-    d.setHours(0, 0, 0, 0)
-    setTodayStr(d.toISOString().slice(0, 10))
-  }, [])
-
-  const { upcoming, past } = useMemo(() => {
-    if (!todayStr) return { upcoming: EVENTS.slice().sort((a, b) => a.date.localeCompare(b.date)), past: [] }
-    const sorted = [...EVENTS].sort((a, b) => a.date.localeCompare(b.date))
-    return {
-      upcoming: sorted.filter(e => e.date >= todayStr),
-      past:     sorted.filter(e => e.date <  todayStr).slice(-3).reverse(),
-    }
-  }, [todayStr])
-
-  const byMonth = useMemo(() => {
-    const map = new Map<string, CalEvent[]>()
-    for (const ev of upcoming) {
-      const key = ev.date.slice(0, 7)
-      if (!map.has(key)) map.set(key, [])
-      map.get(key)!.push(ev)
-    }
-    return map
-  }, [upcoming])
-
-  return (
-    <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold">Calendário Econômico</h2>
-
-      <div className="overflow-y-auto max-h-[480px] flex flex-col gap-4 pr-1">
-        {/* Últimos eventos */}
-        {past.length > 0 && (
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider font-medium px-1">
-              Recentes
-            </span>
-            {past.map((ev, i) => (
-              <EventRow key={i} ev={ev} today={todayStr} />
-            ))}
-          </div>
-        )}
-
-        {/* Próximos eventos agrupados por mês */}
-        {Array.from(byMonth.entries()).map(([monthKey, evs]) => (
-          <div key={monthKey} className="flex flex-col gap-1">
-            <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider font-medium px-1 capitalize">
-              {monthLabel(monthKey + '-01')}
-            </span>
-            {evs.map((ev, i) => (
-              <EventRow key={i} ev={ev} today={todayStr} />
-            ))}
-          </div>
-        ))}
-
-        <p className="text-[10px] text-muted-foreground/50 text-center pt-1">
-          * datas estimadas com base no histórico de divulgação
-        </p>
-      </div>
-    </div>
-  )
+function ValueBadge({ actual, expected, unit, decimals }: {
+  actual: number | null; expected: number | null; unit: string; decimals: number
+}) {
+  if (actual !== null) {
+    return (
+      <span className="ml-auto shrink-0 flex items-center gap-0.5 text-[10px] font-mono text-emerald-400 font-semibold">
+        {actual.toFixed(decimals)}{unit}
+        <span className="text-emerald-500">✓</span>
+      </span>
+    )
+  }
+  if (expected !== null) {
+    return (
+      <span className="ml-auto shrink-0 text-[10px] font-mono text-muted-foreground/70">
+        exp. {expected.toFixed(decimals)}{unit}
+      </span>
+    )
+  }
+  return null
 }
 
-function EventRow({ ev, today }: { ev: CalEvent; today: string }) {
-  const isPast  = ev.date < today
-  const isToday = ev.date === today
+function EventRow({ ev, todayStr }: { ev: EnrichedEvent; todayStr: string }) {
+  const isPast  = ev.date < todayStr
+  const isToday = ev.date === todayStr
 
   return (
-    <div className={`flex items-start gap-2 px-2 py-1.5 rounded-md ${
-      isToday ? 'bg-muted border border-border' : isPast ? 'opacity-40' : ''
+    <div className={`flex items-center gap-2 px-2 py-1.5 rounded-md ${
+      isToday ? 'bg-muted border border-border' : isPast ? 'opacity-50' : ''
     }`}>
-      <span className={`text-[10px] font-mono w-12 shrink-0 pt-0.5 ${
+      <span className={`text-[10px] font-mono w-11 shrink-0 ${
         isToday ? 'text-foreground font-semibold' : 'text-muted-foreground'
       }`}>
         {fmt(ev.date)}
       </span>
 
-      <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${CATEGORY_STYLE[ev.category]}`}>
+      <span className={`text-[10px] px-1 py-0.5 rounded shrink-0 ${CATEGORY_STYLE[ev.category]}`}>
         {CATEGORY_LABEL[ev.category]}
       </span>
 
-      <div className="flex flex-col min-w-0">
+      <div className="flex flex-col min-w-0 flex-1">
         <span className="text-xs font-medium leading-tight truncate">{ev.name}</span>
         <span className="text-[10px] text-muted-foreground">{ev.detail}{!ev.confirmed ? ' *' : ''}</span>
       </div>
 
-      {isToday && (
-        <span className="ml-auto text-[10px] font-semibold text-amber-400 shrink-0">hoje</span>
+      {isToday && !ev.actual && (
+        <span className="text-[10px] font-semibold text-amber-400 shrink-0">hoje</span>
       )}
+
+      <ValueBadge
+        actual={ev.actual}
+        expected={ev.expected}
+        unit={ev.unit}
+        decimals={ev.decimals}
+      />
+    </div>
+  )
+}
+
+export function CalendarSection() {
+  const [events,   setEvents]   = useState<EnrichedEvent[]>([])
+  const [todayStr, setTodayStr] = useState('')
+  const [loading,  setLoading]  = useState(true)
+
+  useEffect(() => {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    setTodayStr(d.toISOString().slice(0, 10))
+
+    fetch('/api/calendar')
+      .then(r => r.json())
+      .then((data: EnrichedEvent[]) => { setEvents(data); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  if (!todayStr || loading) {
+    return (
+      <div className="flex flex-col gap-3">
+        <h2 className="text-sm font-semibold">Calendário Econômico</h2>
+        <div className="flex flex-col gap-1">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-9 rounded-md bg-muted/40 animate-pulse" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // Week boundaries
+  const weekStart    = getISOWeekStart(new Date(todayStr))
+  const weekEnd      = new Date(weekStart)
+  weekEnd.setDate(weekEnd.getDate() + 6)
+  const weekStartStr = toDateStr(weekStart)
+  const weekEndStr   = toDateStr(weekEnd)
+
+  const sorted = [...events].sort((a, b) => a.date.localeCompare(b.date))
+
+  const pastOutsideWeek = sorted.filter(e => e.date < weekStartStr).slice(-4).reverse()
+  const thisWeek        = sorted.filter(e => e.date >= weekStartStr && e.date <= weekEndStr)
+  const future          = sorted.filter(e => e.date > weekEndStr)
+
+  // Group future by month
+  const byMonth = new Map<string, EnrichedEvent[]>()
+  for (const ev of future) {
+    const key = ev.date.slice(0, 7)
+    if (!byMonth.has(key)) byMonth.set(key, [])
+    byMonth.get(key)!.push(ev)
+  }
+
+  const releasedThisWeek = thisWeek.filter(e => e.date <= todayStr).length
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold">Calendário Econômico</h2>
+        {releasedThisWeek > 0 && (
+          <span className="text-[10px] text-emerald-400 font-mono">
+            {releasedThisWeek} divulgad{releasedThisWeek === 1 ? 'o' : 'os'} essa semana
+          </span>
+        )}
+      </div>
+
+      <div className="overflow-y-auto max-h-[520px] flex flex-col gap-3 pr-1">
+
+        {/* Eventos recentes (semanas anteriores) */}
+        {pastOutsideWeek.length > 0 && (
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider font-medium px-1">
+              Recentes
+            </span>
+            {pastOutsideWeek.map((ev, i) => (
+              <EventRow key={i} ev={ev} todayStr={todayStr} />
+            ))}
+          </div>
+        )}
+
+        {/* Esta semana — acumula divulgações + mostra próximos */}
+        {thisWeek.length > 0 && (
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wider font-medium px-1">
+              Esta semana · {fmt(weekStartStr)} – {fmt(weekEndStr)}
+            </span>
+            {thisWeek.map((ev, i) => (
+              <EventRow key={i} ev={ev} todayStr={todayStr} />
+            ))}
+          </div>
+        )}
+
+        {/* Próximas semanas agrupadas por mês */}
+        {Array.from(byMonth.entries()).map(([monthKey, evs]) => (
+          <div key={monthKey} className="flex flex-col gap-0.5">
+            <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider font-medium px-1 capitalize">
+              {monthLabel(monthKey + '-01')}
+            </span>
+            {evs.map((ev, i) => (
+              <EventRow key={i} ev={ev} todayStr={todayStr} />
+            ))}
+          </div>
+        ))}
+
+        <p className="text-[10px] text-muted-foreground/40 text-center pt-1">
+          * datas estimadas · exp. = expectativa BCB Focus (mediana)
+        </p>
+      </div>
     </div>
   )
 }
