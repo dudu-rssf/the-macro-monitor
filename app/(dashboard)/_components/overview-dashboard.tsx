@@ -164,11 +164,19 @@ export function OverviewDashboard() {
   const [data,    setData]    = useState<OverviewData | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  function load() {
+    setLoading(true)
     fetch('/api/overview')
       .then(r => r.json())
       .then((d: OverviewData) => { setData(d); setLoading(false) })
       .catch(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    load()
+    const handler = () => load()
+    window.addEventListener('macro:refresh', handler)
+    return () => window.removeEventListener('macro:refresh', handler)
   }, [])
 
   const ibcBr12m    = data?.ibcBr12m    ?? null

@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Sparkles, RefreshCw } from 'lucide-react'
+
+type Tab = 'geral' | 'recente'
 
 interface AiData {
   bullets: string[]
@@ -17,21 +19,93 @@ function timeAgo(iso: string): string {
   return `${h}h atrás`
 }
 
-export function AiContextSection() {
-  const [data,    setData]    = useState<AiData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error,   setError]   = useState(false)
-
-  function load() {
-    setLoading(true)
-    setError(false)
-    fetch('/api/ai-context')
-      .then(r => r.json())
-      .then((d: AiData) => { setData(d); setLoading(false) })
-      .catch(() => { setError(true); setLoading(false) })
+function BulletPanel({ data, loading, error }: {
+  data: AiData | null
+  loading: boolean
+  error: boolean
+}) {
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-3 pt-1">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            className="h-4 rounded bg-muted/40 animate-pulse"
+            style={{ width: `${65 + (i * 7) % 30}%` }}
+          />
+        ))}
+      </div>
+    )
   }
 
-  useEffect(() => { load() }, [])
+  if (error) {
+    return (
+      <p className="text-xs text-muted-foreground py-4 text-center">
+        Não foi possível gerar a análise. Tente novamente.
+      </p>
+    )
+  }
+
+  if (!data?.bullets || data.bullets.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground py-4 text-center">
+        Nenhuma análise disponível no momento.
+      </p>
+    )
+  }
+
+  return (
+    <ul className="flex flex-col gap-3">
+      {data.bullets.map((bullet, i) => (
+        <li key={i} className="flex gap-2.5 text-xs leading-relaxed">
+          <span className="text-violet-400/70 shrink-0 mt-0.5 font-semibold">•</span>
+          <span className="text-foreground/90">{bullet}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+export function AiContextSection() {
+  const [tab, setTab] = useState<Tab>('geral')
+
+  const [geralData,    setGeralData]    = useState<AiData | null>(null)
+  const [geralLoading, setGeralLoading] = useState(true)
+  const [geralError,   setGeralError]   = useState(false)
+
+  const [recentData,    setRecentData]    = useState<AiData | null>(null)
+  const [recentLoading, setRecentLoading] = useState(false)
+  const [recentError,   setRecentError]   = useState(false)
+  const recentFetched = useRef(false)
+
+  function loadGeral() {
+    setGeralLoading(true)
+    setGeralError(false)
+    fetch('/api/ai-context')
+      .then(r => r.json())
+      .then((d: AiData) => { setGeralData(d); setGeralLoading(false) })
+      .catch(() => { setGeralError(true); setGeralLoading(false) })
+  }
+
+  function loadRecente() {
+    setRecentLoading(true)
+    setRecentError(false)
+    fetch('/api/ai-context/recent')
+      .then(r => r.json())
+      .then((d: AiData) => { setRecentData(d); setRecentLoading(false); recentFetched.current = true })
+      .catch(() => { setRecentError(true); setRecentLoading(false) })
+  }
+
+  useEffect(() => { loadGeral() }, [])
+
+  useEffect(() => {
+    if (tab === 'recente' && !recentFetched.current) loadRecente()
+  }, [tab])
+
+  const activeData    = tab === 'geral' ? geralData    : recentData
+  const activeLoading = tab === 'geral' ? geralLoading : recentLoading
+  const activeError   = tab === 'geral' ? geralError   : recentError
+  const activeLoad    = tab === 'geral' ? loadGeral    : loadRecente
 
   return (
     <div className="flex flex-col gap-3 h-full">
@@ -40,62 +114,58 @@ export function AiContextSection() {
         <Sparkles className="w-3.5 h-3.5 text-violet-400 shrink-0" />
         <h2 className="text-sm font-semibold">Contexto IA</h2>
         <div className="ml-auto flex items-center gap-2">
-          {data?.generatedAt && (
+          {activeData?.generatedAt && (
             <span className="text-[10px] text-muted-foreground font-mono">
-              {timeAgo(data.generatedAt)}
+              {timeAgo(activeData.generatedAt)}
             </span>
           )}
           <button
-            onClick={load}
-            disabled={loading}
+            onClick={activeLoad}
+            disabled={activeLoading}
             className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
             title="Atualizar análise"
           >
-            <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3 h-3 ${activeLoading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-1">
+        {([
+          { key: 'geral',   label: 'Panorama Geral'   },
+          { key: 'recente', label: 'Panorama Recente'  },
+        ] as { key: Tab; label: string }[]).map(t => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`px-2.5 py-1 rounded-md text-[11px] transition-colors ${
+              tab === t.key
+                ? 'bg-violet-500/20 text-violet-300 font-medium'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab description */}
+      <p className="text-[10px] text-muted-foreground/60 leading-relaxed -mt-1">
+        {tab === 'geral'
+          ? 'Visão geral do cenário macro dos últimos 12 meses — contexto e implicações.'
+          : 'Foco nos últimos dados divulgados — surpresas, outliers e o que está mudando agora.'}
+      </p>
+
       {/* Conteúdo */}
-      <div className="flex-1 overflow-y-auto max-h-[440px] pr-1">
-        {loading && (
-          <div className="flex flex-col gap-3 pt-1">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-4 rounded bg-muted/40 animate-pulse"
-                style={{ width: `${65 + (i * 7) % 30}%` }}
-              />
-            ))}
-          </div>
-        )}
-
-        {!loading && error && (
-          <p className="text-xs text-muted-foreground py-4 text-center">
-            Não foi possível gerar a análise. Tente novamente.
-          </p>
-        )}
-
-        {!loading && !error && data?.bullets && data.bullets.length === 0 && (
-          <p className="text-xs text-muted-foreground py-4 text-center">
-            Nenhuma análise disponível no momento.
-          </p>
-        )}
-
-        {!loading && !error && data?.bullets && data.bullets.length > 0 && (
-          <ul className="flex flex-col gap-3">
-            {data.bullets.map((bullet, i) => (
-              <li key={i} className="flex gap-2.5 text-xs leading-relaxed">
-                <span className="text-violet-400/70 shrink-0 mt-0.5 font-semibold">•</span>
-                <span className="text-foreground/90">{bullet}</span>
-              </li>
-            ))}
-          </ul>
-        )}
+      <div className="flex-1 overflow-y-auto max-h-[380px] pr-1">
+        <BulletPanel data={activeData} loading={activeLoading} error={activeError} />
       </div>
 
       <p className="text-[10px] text-muted-foreground/50 pt-1 border-t border-border/30">
-        Gerado por IA com base nos dados do banco · atualiza a cada hora
+        {tab === 'geral'
+          ? 'Gerado por IA com base nos dados do banco · atualiza a cada hora'
+          : 'Gerado por IA com base nos dados recentes · atualiza a cada 15 min'}
       </p>
     </div>
   )

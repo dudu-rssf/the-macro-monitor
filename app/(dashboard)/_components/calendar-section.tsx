@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { RefreshCw } from 'lucide-react'
 import type { EnrichedEvent, EventCategory } from '@/app/api/calendar/route'
 
 const CATEGORY_STYLE: Record<EventCategory, string> = {
@@ -105,20 +106,33 @@ function EventRow({ ev, todayStr }: { ev: EnrichedEvent; todayStr: string }) {
 }
 
 export function CalendarSection() {
-  const [events,   setEvents]   = useState<EnrichedEvent[]>([])
-  const [todayStr, setTodayStr] = useState('')
-  const [loading,  setLoading]  = useState(true)
+  const [events,     setEvents]     = useState<EnrichedEvent[]>([])
+  const [todayStr,   setTodayStr]   = useState('')
+  const [loading,    setLoading]    = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+
+  const load = useCallback((silent = false) => {
+    if (!silent) setLoading(true)
+    else setRefreshing(true)
+    fetch('/api/calendar')
+      .then(r => r.json())
+      .then((data: EnrichedEvent[]) => {
+        setEvents(data)
+        setLoading(false)
+        setRefreshing(false)
+      })
+      .catch(() => { setLoading(false); setRefreshing(false) })
+  }, [])
 
   useEffect(() => {
     const d = new Date()
     d.setHours(0, 0, 0, 0)
     setTodayStr(d.toISOString().slice(0, 10))
-
-    fetch('/api/calendar')
-      .then(r => r.json())
-      .then((data: EnrichedEvent[]) => { setEvents(data); setLoading(false) })
-      .catch(() => setLoading(false))
-  }, [])
+    load()
+    const handler = () => load(true)
+    window.addEventListener('macro:refresh', handler)
+    return () => window.removeEventListener('macro:refresh', handler)
+  }, [load])
 
   if (!todayStr || loading) {
     return (
@@ -158,13 +172,23 @@ export function CalendarSection() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">Calendário Econômico</h2>
-        {releasedThisWeek > 0 && (
-          <span className="text-[10px] text-emerald-400 font-mono">
-            {releasedThisWeek} divulgad{releasedThisWeek === 1 ? 'o' : 'os'} essa semana
-          </span>
-        )}
+        <div className="flex items-center gap-2 ml-auto">
+          {releasedThisWeek > 0 && (
+            <span className="text-[10px] text-emerald-400 font-mono">
+              {releasedThisWeek} divulgad{releasedThisWeek === 1 ? 'o' : 'os'} essa semana
+            </span>
+          )}
+          <button
+            onClick={() => load(true)}
+            disabled={refreshing}
+            title="Atualizar calendário"
+            className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+          >
+            <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
       <div className="overflow-y-auto max-h-[520px] flex flex-col gap-3 pr-1">

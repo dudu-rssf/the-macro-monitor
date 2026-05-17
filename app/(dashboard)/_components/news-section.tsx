@@ -71,7 +71,11 @@ export function NewsSection() {
   useEffect(() => {
     load()
     const id = setInterval(load, 15 * 60 * 1000)
-    return () => clearInterval(id)
+    window.addEventListener('macro:refresh', load)
+    return () => {
+      clearInterval(id)
+      window.removeEventListener('macro:refresh', load)
+    }
   }, [load])
 
   // Filter to today's news in BRT, fallback to all if nothing today
