@@ -177,10 +177,16 @@ async function fetchFocus(): Promise<{
   igpm:  Record<string, number>
   selic: number | null            // expectativa mais recente próxima reunião
 }> {
+  function focusUrl(endpoint: string, filter: string, select: string): string {
+    const p = new URLSearchParams({ '$format': 'json', '$top': '60', '$orderby': 'Data desc', '$select': select })
+    if (filter) p.set('$filter', filter)
+    return `${FOCUS_BASE}/${endpoint}?${p.toString()}`
+  }
+
   const [ipcaR, igpmR, selicR] = await Promise.allSettled([
-    fetch(`${FOCUS_BASE}/ExpectativaMercadoMensais?%24filter=Indicador%20eq%20%27IPCA%27%20and%20baseCalculo%20eq%200&%24top=60&%24format=application%2Fjson%3Bcharset%3Dutf-8&%24orderby=Data%20desc&%24select=DataReferencia%2CMediana`, { signal: AbortSignal.timeout(8_000) }),
-    fetch(`${FOCUS_BASE}/ExpectativaMercadoMensais?%24filter=Indicador%20eq%20%27IGP-M%27%20and%20baseCalculo%20eq%200&%24top=60&%24format=application%2Fjson%3Bcharset%3Dutf-8&%24orderby=Data%20desc&%24select=DataReferencia%2CMediana`, { signal: AbortSignal.timeout(8_000) }),
-    fetch(`${FOCUS_BASE}/ExpectativaMercadoSelic?%24top=10&%24format=application%2Fjson%3Bcharset%3Dutf-8&%24orderby=Data%20desc&%24select=Reuniao%2CMediana`, { signal: AbortSignal.timeout(8_000) }),
+    fetch(focusUrl('ExpectativaMercadoMensais', "Indicador eq 'IPCA' and baseCalculo eq 0", 'DataReferencia,Mediana'), { signal: AbortSignal.timeout(8_000) }),
+    fetch(focusUrl('ExpectativaMercadoMensais', "Indicador eq 'IGP-M' and baseCalculo eq 0", 'DataReferencia,Mediana'), { signal: AbortSignal.timeout(8_000) }),
+    fetch(focusUrl('ExpectativaMercadoSelic',  '', 'Reuniao,Mediana'), { signal: AbortSignal.timeout(8_000) }),
   ])
 
   const ipca:  Record<string, number> = {}

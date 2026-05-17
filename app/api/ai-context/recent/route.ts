@@ -15,8 +15,14 @@ function delta(latest: number | null | undefined, prev: number | null | undefine
 
 async function fetchFocusIPCA(refMonth: string): Promise<number | null> {
   try {
-    const encoded = encodeURIComponent(refMonth)
-    const url = `https://olinda.bcb.gov.br/olinda/servico/Expectativas/versao/v1/odata/ExpectativaMercadoMensais?%24filter=Indicador%20eq%20'IPCA'%20and%20DataReferencia%20eq%20'${encoded}'%20and%20Suavizada%20eq%20'N'%20and%20baseCalculo%20eq%20'0'&%24top=5&%24orderby=Data%20desc&%24format=json&%24select=Mediana`
+    const p = new URLSearchParams({
+      '$format':  'json',
+      '$top':     '5',
+      '$orderby': 'Data desc',
+      '$select':  'Mediana',
+      '$filter':  `Indicador eq 'IPCA' and DataReferencia eq '${refMonth}' and baseCalculo eq 0`,
+    })
+    const url = `https://olinda.bcb.gov.br/olinda/servico/Expectativas/versao/v1/odata/ExpectativaMercadoMensais?${p.toString()}`
     const res = await fetch(url, { signal: AbortSignal.timeout(6_000) })
     if (!res.ok) return null
     const json = await res.json()

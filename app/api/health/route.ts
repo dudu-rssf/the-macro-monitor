@@ -40,8 +40,9 @@ export async function GET() {
     }),
 
     check('BCB Focus (Olinda)', 'APIs de Dados', async () => {
+      const p = new URLSearchParams({ '$format': 'json', '$top': '1' })
       const res = await fetch(
-        'https://olinda.bcb.gov.br/olinda/servico/Expectativas/versao/v1/odata/ExpectativaMercadoSelic?%24top=1&%24format=json',
+        `https://olinda.bcb.gov.br/olinda/servico/Expectativas/versao/v1/odata/ExpectativaMercadoSelic?${p.toString()}`,
         { signal: AbortSignal.timeout(8_000) }
       )
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
