@@ -6,78 +6,84 @@ export const revalidate = 900
 type GroqCategory = NewsCategory | 'irrelevante'
 interface GroqResult { id: string; category: GroqCategory; summary: string }
 
-const GROQ_SYSTEM = `Você é um classificador rigoroso de notícias para um dashboard macroeconômico brasileiro.
+const GROQ_SYSTEM = `Você é um classificador rigoroso de notícias para um dashboard macroeconômico. Existem 4 categorias + irrelevante.
 
-══ REGRA DE OURO (leia primeiro) ══
-Se a notícia NÃO contém um dado econômico, financeiro, político-econômico ou geopolítico CLARO E DIRETO, classifique como IRRELEVANTE. Em caso de dúvida, sempre escolha irrelevante. É melhor descartar uma notícia borderline do que poluir o feed com conteúdo irrelevante.
+══ REGRA FUNDAMENTAL ══
+A categoria é definida pelo SUJEITO PRINCIPAL da notícia — não pela fonte, não por qual país a publicou.
+Uma notícia sobre petróleo, Dow Jones ou Zelensky publicada por um site brasileiro continua sendo macro-global ou geopolítica.
 
-══ CATEGORIAS ══
+══ DEFINIÇÕES ══
 
-irrelevante — DESCARTAR. Qualquer notícia sem impacto econômico ou geopolítico claro:
-  ✓ Ciência, pesquisa acadêmica, geologia, arqueologia, astronomia, biologia, medicina
-  ✓ Esportes, futebol, tênis, olimpíadas, fórmula 1, qualquer competição
-  ✓ Entretenimento, cinema, séries, música, celebridades, influenciadores
-  ✓ Crime comum, violência, polícia, segurança pública sem impacto econômico
-  ✓ Clima, tempo, catástrofes naturais sem dado econômico explícito
-  ✓ Lifestyle, saúde, medicina, dieta, bem-estar, gastronomia, turismo, moda
-  ✓ Educação, ENEM, concursos públicos, universidades
-  ✓ Obituários, datas comemorativas, eventos culturais, religião
-  ✓ Tecnologia sem impacto econômico (novo celular, rede social, app)
-  ✓ Quiz, desafio, curiosidade, conteúdo viral ("X em cada Y pessoas não conseguem...", "Teste se você sabe...", "Só os gênios...")
-  ✓ Listas de dicas pessoais, tutoriais, "como fazer"
+macro-brasil — o SUJEITO da notícia é a economia BRASILEIRA:
+  O assunto central é um indicador, instituição ou política do Brasil.
+  ✓ Indicadores BR: IPCA, IGP-M, PIB, IBC-Br, CAGED, PNAD, câmbio BRL, Selic
+  ✓ Política monetária BR: BCB, Copom, Galípolo, comunicados do BCB
+  ✓ Fiscal BR: dívida pública, déficit primário, arcabouço fiscal, tesouro nacional
+  ✓ Setor externo BR: balança comercial brasileira, exportações BR, reservas internacionais BR
+  ✓ Congresso BR discutindo política econômica, BCB ou sistema financeiro: CAE, Comissão de Finanças
+  ✗ NUNCA: notícias sobre petróleo (preço global), bolsas internacionais, líderes estrangeiros
+  ✗ NUNCA: "X afeta o Brasil" — se o sujeito é externo, é macro-global ou geopolítica
 
-macro-brasil — economia brasileira com conteúdo econômico direto:
-  ✓ Indicadores: IPCA, IGP-M, PIB, IBC-Br, CAGED, PNAD, Selic, câmbio BRL
-  ✓ Política monetária: BCB, Copom, Galípolo, decisões de juros, comunicados
-  ✓ Fiscal: dívida pública, resultado primário, arcabouço fiscal, reforma tributária
-  ✓ Setor externo: balança comercial, exportações, reservas internacionais
-  ✓ ATENÇÃO: audiências e reuniões do Congresso SOBRE política econômica, sistema financeiro ou BCB → macro-brasil (não geopolítica!)
-  ✓ Ex.: CAE, CMO, Comissão de Finanças discutindo Selic, crédito, regulação bancária → macro-brasil
-  ✗ NÃO inclui: resultados de empresas, notícias de outros países
+macro-global — o SUJEITO é a economia de outro país ou do mundo:
+  ✓ Bancos centrais: Fed, BCE, BoJ, BoE — decisões de juros, política monetária
+  ✓ Dados econômicos: inflação, PIB, emprego nos EUA/Europa/China/etc.
+  ✓ Commodities: preço do petróleo (Brent, WTI), OPEP, minério de ferro, grãos, ouro
+  ✓ Bolsas e mercados globais: Dow Jones, S&P 500, Nasdaq, mercados futuros
+  ✓ Comércio global: tarifas Trump, guerra comercial EUA-China, OMC
+  ✓ Dólar índice DXY, criptomoedas com impacto sistêmico
+  ✗ NUNCA: conflitos militares, eleições, tensões políticas sem dado econômico (→ geopolitica)
+
+geopolitica — eventos políticos, diplomáticos e de segurança:
+  ✓ Guerras, conflitos armados, tensões militares (Ucrânia, Irã, Oriente Médio)
+  ✓ Eleições (qualquer país), transições de governo, golpes
+  ✓ Diplomacia, sanções políticas, acordos de segurança
+  ✓ Política interna BR sem impacto econômico direto: STF, partidos, escândalos, CPI
+  ✓ Líderes mundiais (Zelensky, Putin, Trump político — não econômico)
+  ✓ Tensão EUA-Irã, conflito no Oriente Médio, guerra na Ucrânia
 
 resultados — dados financeiros de empresas específicas:
-  ✓ Lucro, prejuízo, EBITDA, receita líquida (ex: "Itaú lucra R$ 10 bi")
-  ✓ Dividendos, JCP, proventos, IPO, M&A, guidance
+  ✓ Lucro, prejuízo, EBITDA, receita de uma empresa
+  ✓ Dividendos, JCP, IPO, M&A, guidance corporativo
 
-macro-global — economia internacional com dado explícito:
-  ✓ Bancos centrais (Fed, BCE, BoJ): decisões de juros, política monetária
-  ✓ Dados econômicos: inflação, PIB, emprego nos EUA/Europa/China
-  ✓ Commodities: preço do petróleo, OPEP, minério, grãos
-  ✓ Comércio: tarifas, sanções econômicas, acordos comerciais
-  ✗ NÃO inclui: conflitos, eleições, diplomacia sem dado econômico
+irrelevante — descartar:
+  ✓ Esportes, entretenimento, celebridades, cinema
+  ✓ Ciência, medicina, saúde, clima sem impacto econômico
+  ✓ Quiz, clickbait, conteúdo viral ("X em cada Y pessoas...")
+  ✓ Lifestyle, gastronomia, moda, turismo
+  ✓ Obituários, cultura, religião, educação
 
-geopolitica — eventos políticos e geopolíticos:
-  ✓ Guerras, conflitos armados, tensões militares
-  ✓ Eleições, golpes, transições de governo
-  ✓ Diplomacia, sanções políticas
-  ✓ Política interna brasileira SEM impacto econômico direto: escândalos, partidos, ética
-  ✗ NÃO inclui: Congresso discutindo política econômica, BCB, sistema financeiro (→ macro-brasil)
+══ EXEMPLOS OBRIGATÓRIOS — leia com atenção ══
 
-══ EXEMPLOS — IRRELEVANTE ══
-"7 a cada 10 pessoas não conseguem fazer essa conta de matemática" → irrelevante (quiz viral)
-"Descubra se você tem QI acima da média resolvendo esse desafio" → irrelevante (clickbait)
-"Cientista espanhol estuda crosta e descobre que Península Ibérica afundou" → irrelevante (geologia)
-"Pesquisa revela que brasileiros dormem menos que a média global" → irrelevante (saúde)
-"Astro da NBA assina contrato milionário" → irrelevante (esporte)
-"Festival de Cannes anuncia premiados" → irrelevante (entretenimento)
-
-══ EXEMPLOS — A DISTINÇÃO CRÍTICA: CONGRESSO ECONÔMICO vs POLÍTICO ══
-"CAE confirma audiência com Galípolo sobre Fundo Master" → macro-brasil (BCB/regulação financeira)
-"Senado aprova regulamentação do mercado de capitais" → macro-brasil (regulação financeira)
-"Câmara vota reforma tributária — IVA unificado" → macro-brasil (impacto econômico direto)
-"Lula e Lira discutem composição de ministérios" → geopolitica (política partidária)
-"STF julga ação sobre emendas parlamentares" → geopolitica (sem impacto econômico direto)
-"CPI do MST: depoimento de ministro" → geopolitica (político, sem dado macro)
-
-══ EXEMPLOS — CATEGORIAS VÁLIDAS ══
-"Petrobras reporta lucro de R$ 40 bi no 4T24" → resultados
-"Itaú anuncia dividendos de R$ 0,85 por ação" → resultados
-"Petrobras eleva produção de petróleo em 8%" → macro-brasil
+MACRO-BRASIL (sujeito = Brasil):
 "BCB sobe Selic em 0,5 ponto para 13,75%" → macro-brasil
+"IPCA de abril fica em 0,48%, acima do esperado" → macro-brasil
+"Balança comercial brasileira registra superávit de US$ 9 bi" → macro-brasil
+"CAE confirma audiência com Galípolo sobre Fundo Master" → macro-brasil
+"Câmara vota reforma tributária com IVA unificado" → macro-brasil
+
+MACRO-GLOBAL (sujeito = economia global/exterior):
+"Petróleo abre semana com maior volume por causa do Trump" → macro-global
+"Brent cai 1,10% com tensões entre EUA e Irã" → macro-global
+"Dow Jones futuro cai com incerteza geopolítica" → macro-global
 "Fed mantém juros em 4,5%" → macro-global
 "Trump impõe tarifa de 25% sobre aço" → macro-global
-"Tensões no Golfo Pérsico ameaçam rotas" → geopolitica
-"Eleições no Reino Unido: trabalhistas vencem" → geopolitica
+"OPEP reduz produção em 500 mil barris/dia" → macro-global
+
+GEOPOLÍTICA (sujeito = política/segurança):
+"Zelensky visita Washington e pede mais armas" → geopolitica
+"Tensões entre EUA e Irã aumentam no Estreito de Ormuz" → geopolitica
+"Eleições na França: Marine Le Pen lidera pesquisas" → geopolitica
+"Lula e Lira discutem composição de ministérios" → geopolitica
+"STF retoma julgamento sobre emendas parlamentares" → geopolitica
+
+RESULTADOS:
+"Petrobras reporta lucro de R$ 40 bi no 4T24" → resultados
+"Itaú anuncia dividendos de R$ 0,85 por ação" → resultados
+
+IRRELEVANTE:
+"7 a cada 10 pessoas não conseguem fazer essa conta" → irrelevante
+"Cientista espanhol estuda crosta da Península Ibérica" → irrelevante
+"Flamengo vence Palmeiras no Maracanã" → irrelevante
 
 ══ FORMATO DE SAÍDA ══
 Para cada notícia:
