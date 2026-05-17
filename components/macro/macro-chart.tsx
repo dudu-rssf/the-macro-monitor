@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import {
   LineChart, Line, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, ReferenceLine, Legend
@@ -19,6 +20,17 @@ export interface ReferenceLineConfig {
   color: string
 }
 
+type Smoothing = 'raw' | 'mm3' | 'mm6' | 'mm9' | 'mm12' | 'yoy'
+
+const SMOOTHING_OPTIONS: { value: Smoothing; label: string }[] = [
+  { value: 'raw',  label: 'Bruto' },
+  { value: 'mm3',  label: 'MM3'   },
+  { value: 'mm6',  label: 'MM6'   },
+  { value: 'mm9',  label: 'MM9'   },
+  { value: 'mm12', label: 'MM12'  },
+  { value: 'yoy',  label: 'YoY'   },
+]
+
 interface MacroChartProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   allData: any[]
@@ -32,6 +44,45 @@ interface MacroChartProps {
   xKey?: string
   xFormatter?: (value: string) => string
   yDomain?: [number, number]
+  showSmoothing?: boolean
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function applySmoothing(data: any[], keys: string[], smoothing: Smoothing): any[] {
+  if (smoothing === 'raw') return data
+
+  if (smoothing === 'yoy') {
+    return data.map((row, i) => {
+      const newRow = { ...row }
+      if (i < 12) {
+        keys.forEach((k) => { newRow[k] = undefined })
+        return newRow
+      }
+      const prev = data[i - 12]
+      keys.forEach((key) => {
+        const curr = row[key]
+        const past = prev[key]
+        newRow[key] = typeof curr === 'number' && typeof past === 'number'
+          ? parseFloat((curr - past).toFixed(2))
+          : undefined
+      })
+      return newRow
+    })
+  }
+
+  const n = smoothing === 'mm3' ? 3 : smoothing === 'mm6' ? 6 : smoothing === 'mm9' ? 9 : 12
+  return data.map((row, i) => {
+    const newRow = { ...row }
+    keys.forEach((key) => {
+      const window = data.slice(Math.max(0, i - n + 1), i + 1)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const vals = window.map((r: any) => r[key]).filter((v: unknown): v is number => typeof v === 'number')
+      newRow[key] = vals.length > 0
+        ? parseFloat((vals.reduce((a: number, b: number) => a + b, 0) / vals.length).toFixed(2))
+        : undefined
+    })
+    return newRow
+  })
 }
 
 export function cutData(data: { date: string }[], range: TimeRange) {
@@ -53,13 +104,9 @@ function formatValue(value: number, unit: string) {
   return `${value.toFixed(2)}${unit}`
 }
 
-// Smart Y-axis domain: zoom in when values occupy top portion of the scale.
-// Rule: if all values ≥ 0 and min/max ≥ 0.65 → start near min (not at 0).
-// This prevents IBC-Br (90-120) from showing empty space below.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function computeYDomain(data: any[], seriesKeys: string[], refLineValues: number[], isBar: boolean, isStacked = false): [number, number] | undefined {
   if (isBar && isStacked) {
-    // Stacked bars: domain must fit the total stack per date, not individual series max
     const rowSums = data.map((row) =>
       seriesKeys.reduce((sum, k) => sum + (typeof row[k] === 'number' ? (row[k] as number) : 0), 0)
     )
@@ -80,36 +127,42 @@ function computeYDomain(data: any[], seriesKeys: string[], refLineValues: number
   const raw_max = Math.max(...allNums)
   if (raw_max === raw_min) return undefined
 
-  // Bar charts always anchor at 0
   if (isBar) {
     return [Math.min(0, raw_min), raw_max * 1.05]
   }
 
   if (raw_min < 0) {
-    // negative values — pad both sides symmetrically
     const pad = (raw_max - raw_min) * 0.08
     return [raw_min - pad, raw_max + pad]
   }
 
   if (raw_min / raw_max >= 0.65) {
-    // tight positive range → zoom in with small margin
     const pad = (raw_max - raw_min) * 0.15
     return [Math.max(0, raw_min - pad), raw_max + pad]
   }
 
-  // default: start at 0
   return [0, raw_max * 1.05]
 }
 
 export function MacroChart({
   allData, series, referenceLines = [], unit = '%', height = 280,
   chartType = 'line', stacked = false, effectiveRange, xKey = 'date', xFormatter, yDomain: yDomainProp,
+  showSmoothing,
 }: MacroChartProps) {
-  const data = xKey === 'date' ? cutData(allData as { date: string }[], effectiveRange) : allData
+  const [smoothing, setSmoothing] = useState<Smoothing>('raw')
+
+  const showSmoothingToggle = showSmoothing !== undefined ? showSmoothing : !stacked
+
+  const seriesKeys = series.map((s) => s.key)
+  const processedAllData = xKey === 'date' && smoothing !== 'raw'
+    ? applySmoothing(allData, seriesKeys, smoothing)
+    : allData
+
+  const data = xKey === 'date' ? cutData(processedAllData as { date: string }[], effectiveRange) : processedAllData
 
   const yDomain = yDomainProp ?? computeYDomain(
     data,
-    series.map((s) => s.key),
+    seriesKeys,
     referenceLines.map((r) => r.value),
     chartType === 'bar',
     stacked,
@@ -187,25 +240,44 @@ export function MacroChart({
   const commonProps = { data, margin: { top: 4, right: 16, left: 0, bottom: 0 } }
 
   return (
-    <ChartContainer config={config} className="w-full aspect-auto" style={{ height }}>
-      {chartType === 'bar' ? (
-        <BarChart {...commonProps}>
-          {grid}{xAxis}{yAxis}{tooltip}{legend}
-          {refLines}
-          {series.map((s) => (
-            <Bar key={s.key} dataKey={s.key} fill={s.color} radius={stacked ? [0,0,0,0] : [2,2,0,0]} maxBarSize={stacked ? 40 : 16} stackId={stacked ? 'stack' : undefined} />
+    <div className="flex flex-col gap-1">
+      {showSmoothingToggle && (
+        <div className="flex justify-end gap-0.5">
+          {SMOOTHING_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setSmoothing(opt.value)}
+              className={`px-1.5 py-0.5 text-[10px] font-mono rounded transition-colors ${
+                smoothing === opt.value
+                  ? 'bg-muted text-foreground font-semibold'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+              }`}
+            >
+              {opt.label}
+            </button>
           ))}
-        </BarChart>
-      ) : (
-        <LineChart {...commonProps}>
-          {grid}{xAxis}{yAxis}{tooltip}{legend}
-          {refLines}
-          {series.map((s) => (
-            <Line key={s.key} type="monotone" dataKey={s.key} stroke={s.color}
-              strokeWidth={1.5} dot={false} activeDot={{ r: 3 }} />
-          ))}
-        </LineChart>
+        </div>
       )}
-    </ChartContainer>
+      <ChartContainer config={config} className="w-full aspect-auto" style={{ height }}>
+        {chartType === 'bar' ? (
+          <BarChart {...commonProps}>
+            {grid}{xAxis}{yAxis}{tooltip}{legend}
+            {refLines}
+            {series.map((s) => (
+              <Bar key={s.key} dataKey={s.key} fill={s.color} radius={stacked ? [0,0,0,0] : [2,2,0,0]} maxBarSize={stacked ? 40 : 16} stackId={stacked ? 'stack' : undefined} />
+            ))}
+          </BarChart>
+        ) : (
+          <LineChart {...commonProps}>
+            {grid}{xAxis}{yAxis}{tooltip}{legend}
+            {refLines}
+            {series.map((s) => (
+              <Line key={s.key} type="monotone" dataKey={s.key} stroke={s.color}
+                strokeWidth={1.5} dot={false} activeDot={{ r: 3 }} />
+            ))}
+          </LineChart>
+        )}
+      </ChartContainer>
+    </div>
   )
 }
