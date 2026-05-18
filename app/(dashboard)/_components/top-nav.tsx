@@ -15,9 +15,7 @@ const navLinks = [
   { href: '/externo',            label: 'Externo',        },
   { href: '/credito',            label: 'Crédito',        },
   { href: '/mercados',           label: 'Mercados',       },
-  { href: '/quant',              label: 'Quant',          },
-  { href: '/geopolitica',        label: 'Geopolítica',    },
-  { href: '/negocios',           label: 'Negócios',       },
+  { href: '/noticias',           label: 'Notícias',       },
   { href: '/painel',             label: 'Painel',         },
 ]
 
