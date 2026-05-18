@@ -2,7 +2,6 @@
 
 import { getSeriesHistoryFrom, getSeriesLatestTwo, getSeriesMonthly } from '@/db/queries'
 import { ExternalDashboard } from './_components/external-dashboard'
-import { TabAiSummary } from '@/components/macro/tab-ai-summary'
 
 const FROM      = new Date('2003-01-01')
 const FROM_2015 = new Date('2015-01-01')
@@ -33,7 +32,6 @@ export default async function ExternoPage() {
   ])
 
   return (
-    <>
     <ExternalDashboard
       data={{
         balancaKv,
@@ -53,7 +51,5 @@ export default async function ExternoPage() {
         reer:         reerH?.data       ?? [],
       }}
     />
-    <TabAiSummary tab="externo" />
-  </>
   )
 }

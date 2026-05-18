@@ -4,7 +4,6 @@ import { getSeriesHistoryFrom, getSeriesLatestTwo, getSeriesMonthly } from '@/db
 import { fetchFocusAnual } from '@/lib/sources/bcb-focus'
 import { fetchEttj } from '@/lib/sources/anbima-ettj'
 import { MonetaryDashboard } from './_components/monetary-dashboard'
-import { TabAiSummary } from '@/components/macro/tab-ai-summary'
 import type { SeriesPoint } from '@/components/macro/types'
 
 const FROM      = new Date('2015-01-01')
@@ -210,7 +209,6 @@ export default async function PoliticaMonetariaPage() {
   const bmaData = bmaH?.data ?? []
 
   return (
-    <>
     <MonetaryDashboard
       data={{
         selicKv,
@@ -235,7 +233,5 @@ export default async function PoliticaMonetariaPage() {
         ettj,
       }}
     />
-    <TabAiSummary tab="politica-monetaria" />
-  </>
   )
 }

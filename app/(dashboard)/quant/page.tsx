@@ -3,7 +3,6 @@
 import { getSeriesHistory, getSeriesHistoryFrom } from '@/db/queries'
 import { hpTrend } from '@/lib/hp-filter'
 import { QuantDashboard } from './_components/quant-dashboard'
-import { TabAiSummary } from '@/components/macro/tab-ai-summary'
 
 const FROM_2001 = new Date('2001-01-01')
 
@@ -222,11 +221,8 @@ export default async function QuantPage() {
   })).slice(-48)
 
   return (
-    <>
     <QuantDashboard
       data={{ hiatoData, taylorData, surpriseData, debtData, corrData, fciData }}
     />
-    <TabAiSummary tab="quant" />
-  </>
   )
 }

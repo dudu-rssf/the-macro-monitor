@@ -2,7 +2,6 @@
 
 import { getSeriesHistoryFrom, getSeriesLatestTwo } from '@/db/queries'
 import { LaborDashboard } from './_components/labor-dashboard'
-import { TabAiSummary } from '@/components/macro/tab-ai-summary'
 import type { SeriesPoint } from '@/components/macro/types'
 
 const FROM      = new Date('2012-01-01')
@@ -81,7 +80,6 @@ export default async function TrabalhoPage() {
   }
 
   return (
-    <>
     <LaborDashboard
       data={{
         desempregoKv,
@@ -104,7 +102,5 @@ export default async function TrabalhoPage() {
         empServ:   empServH?.data   ?? [],
       }}
     />
-    <TabAiSummary tab="trabalho" />
-  </>
   )
 }

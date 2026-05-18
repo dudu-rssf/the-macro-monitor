@@ -3,7 +3,6 @@
 import { getSeriesLatestTwo, getSeriesMonthly } from '@/db/queries'
 import { fetchYahooMonthly, normalizeToBase100 } from '@/lib/sources/yahoo'
 import { MarketsDashboard } from './_components/markets-dashboard'
-import { TabAiSummary } from '@/components/macro/tab-ai-summary'
 
 const FROM = new Date('2015-01-01')
 
@@ -49,7 +48,6 @@ export default async function MercadosPage() {
   })
 
   return (
-    <>
     <MarketsDashboard
       data={{
         selicKv, usdBrlKv, embiKv, diOverKv,
@@ -61,7 +59,5 @@ export default async function MercadosPage() {
         equityIndices,
       }}
     />
-    <TabAiSummary tab="mercados" />
-  </>
   )
 }

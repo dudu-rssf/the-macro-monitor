@@ -2,7 +2,6 @@
 
 import { getSeriesHistoryFrom, getSeriesLatestTwo } from '@/db/queries'
 import { InflationDashboard } from './_components/inflation-dashboard'
-import { TabAiSummary } from '@/components/macro/tab-ai-summary'
 
 const BCB_META_CENTRAL = 3.0
 const BCB_META_TETO    = 4.5
@@ -56,7 +55,6 @@ export default async function InflacaoPage() {
   ])
 
   return (
-    <>
     <InflationDashboard
       metaCentral={BCB_META_CENTRAL}
       metaTeto={BCB_META_TETO}
@@ -95,7 +93,5 @@ export default async function InflacaoPage() {
         gr1643: gr1643H?.data ?? [],
       }}
     />
-    <TabAiSummary tab="inflacao" />
-  </>
   )
 }

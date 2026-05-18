@@ -2,7 +2,6 @@
 
 import { getSeriesHistoryFrom, getSeriesLatestTwo } from '@/db/queries'
 import { FiscalDashboard } from './_components/fiscal-dashboard'
-import { TabAiSummary } from '@/components/macro/tab-ai-summary'
 
 const FROM      = new Date('2003-01-01')
 const FROM_2015 = new Date('2015-01-01')
@@ -28,7 +27,6 @@ export default async function FiscalPage() {
   ])
 
   return (
-    <>
     <FiscalDashboard
       data={{
         dlspKv,
@@ -43,7 +41,5 @@ export default async function FiscalPage() {
         primarioSemDesval: primarioSemDesvalH?.data ?? [],
       }}
     />
-    <TabAiSummary tab="fiscal" />
-  </>
   )
 }

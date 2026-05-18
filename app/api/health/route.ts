@@ -53,15 +53,6 @@ export async function GET() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
     }),
 
-    check('Gemini API', 'APIs de IA', async () => {
-      if (!process.env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY não configurada')
-      const res = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/models', {
-        headers: { Authorization: `Bearer ${process.env.GEMINI_API_KEY}` },
-        signal: AbortSignal.timeout(8_000),
-      })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    }),
-
     // ── Feeds RSS ──────────────────────────────────────────────────────
     check('Agência Brasil (RSS)', 'Feeds RSS', async () => {
       const res = await fetch(
