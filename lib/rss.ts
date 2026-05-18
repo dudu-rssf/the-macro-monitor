@@ -50,10 +50,10 @@ const FEEDS: { url: string; source: string; defaultCategory: NewsCategory }[] = 
   { url: 'https://www.mzgroup.com.br/news/feed/',                            source: 'MZ Group',           defaultCategory: 'resultados'   },
   { url: 'https://www.primorico.com.br/feed/',                               source: 'Primo Rico',         defaultCategory: 'resultados'   },
 
-  // ── Política BR (Groq vai classificar como geopolítica) ───────────────────
-  { url: 'https://www.poder360.com.br/feed/',                                source: 'Poder360',           defaultCategory: 'geopolitica'  },
-  { url: 'https://congressoemfoco.uol.com.br/feed/',                         source: 'Congresso em Foco',  defaultCategory: 'geopolitica'  },
-  { url: 'https://feeds.folha.uol.com.br/poder/rss091.xml',                  source: 'Folha Poder',        defaultCategory: 'geopolitica'  },
+  // ── Política BR ───────────────────────────────────────────────────────────
+  { url: 'https://www.poder360.com.br/feed/',                                source: 'Poder360',           defaultCategory: 'politica-brasil' },
+  { url: 'https://congressoemfoco.uol.com.br/feed/',                         source: 'Congresso em Foco',  defaultCategory: 'politica-brasil' },
+  { url: 'https://feeds.folha.uol.com.br/poder/rss091.xml',                  source: 'Folha Poder',        defaultCategory: 'politica-brasil' },
 
   // ── Macro Global ──────────────────────────────────────────────────────────
   { url: 'https://feeds.reuters.com/reuters/BRTopNews',                      source: 'Reuters Brasil',     defaultCategory: 'macro-global' },
@@ -144,6 +144,24 @@ function parseItems(xml: string, source: string, def: NewsCategory): NewsItem[] 
   return items
 }
 
+// Refinamento por palavras-chave para itens macro-brasil que são claramente outra categoria
+function refineCategory(item: NewsItem): NewsItem {
+  if (item.category !== 'macro-brasil') return item
+  const t = (item.title + ' ' + item.description).toLowerCase()
+
+  // Resultados financeiros de empresas
+  if (/lucro (líquido|de r\$)|prejuízo (líquido|de r\$)|\bebitda\b|dividendo|jcp\b|resultado (do|no) (trimestre|ano)|guidance/.test(t)) {
+    return { ...item, category: 'resultados' }
+  }
+
+  // Movimentos estratégicos de empresas
+  if (/\bnovo ceo\b|\bnova ceo\b|aquisição de|fusão com|\bipo\b|joint venture|plano de (expansão|investimento)|nova fábrica|novo diretor-presidente/.test(t)) {
+    return { ...item, category: 'negocios-brasil' }
+  }
+
+  return item
+}
+
 export async function fetchAllNews(): Promise<NewsItem[]> {
   const settled = await Promise.allSettled(
     FEEDS.map(async ({ url, source, defaultCategory }) => {
@@ -162,5 +180,7 @@ export async function fetchAllNews(): Promise<NewsItem[]> {
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
 
   const seen = new Set<string>()
-  return all.filter(n => { if (seen.has(n.url)) return false; seen.add(n.url); return true })
+  return all
+    .filter(n => { if (seen.has(n.url)) return false; seen.add(n.url); return true })
+    .map(refineCategory)
 }
