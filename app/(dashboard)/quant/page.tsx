@@ -1,6 +1,6 @@
-﻿export const dynamic = 'force-dynamic'
+export const dynamic = 'force-dynamic'
 
-import { getSeriesHistory, getSeriesHistoryFrom } from '@/db/queries'
+import { getSeriesHistory, getSeriesHistoryFrom, getSeriesMonthly } from '@/db/queries'
 import { hpTrend } from '@/lib/hp-filter'
 import { QuantDashboard } from './_components/quant-dashboard'
 
@@ -11,7 +11,9 @@ function sort<T extends { date: string }>(arr: T[]): T[] {
 }
 
 function makeMap(pts: { date: string; value: number }[]): Map<string, number> {
-  return new Map(pts.map(p => [p.date.slice(0, 7), p.value]))
+  const m = new Map<string, number>()
+  for (const p of pts) m.set(p.date.slice(0, 7), p.value)
+  return m
 }
 
 function zScoreArr(vals: number[]): number[] {
@@ -57,13 +59,12 @@ async function fetchFocusSurprise(
     })
     const res = await fetch(
       `https://olinda.bcb.gov.br/olinda/servico/Expectativas/versao/v1/odata/ExpectativaMercadoMensais?${p}`,
-      { signal: AbortSignal.timeout(15_000) },
+      { signal: AbortSignal.timeout(15_000), next: { revalidate: 900 } },
     )
     if (!res.ok) return []
     const json = await res.json()
     const rows: { DataReferencia: string; Mediana: number; Data: string }[] = json.value ?? []
 
-    // Keep the most recent expectation recorded before/during the reference month
     const byRef = new Map<string, number>()
     for (const row of rows) {
       const [mm, yyyy] = row.DataReferencia.split('/')
@@ -87,19 +88,19 @@ async function fetchFocusSurprise(
 
 export default async function QuantPage() {
   const [
-    ibcSaH, ipca12H, selicH, embiH, usdH, spreadPfH,
+    ibcSaH, ipca12H, selicPts, embiPts, usdPts, spreadPfPts,
     dlspH, primH, ibcBr12H, desempH, ipcaMH,
   ] = await Promise.all([
     getSeriesHistoryFrom('24364', FROM_2001),  // IBC-Br SA (long history for HP)
-    getSeriesHistory('13522', 72),             // IPCA 12m
-    getSeriesHistory('1178',  72),             // Selic
-    getSeriesHistory('11752', 72),             // EMBI+
-    getSeriesHistory('10813', 72),             // USD/BRL
-    getSeriesHistory('20786', 72),             // Spread PF
-    getSeriesHistory('4513',  72),             // DLSP % PIB
-    getSeriesHistory('5788',  72),             // Primário % PIB
-    getSeriesHistory('22065', 72),             // IBC-Br 12m
-    getSeriesHistory('24369', 72),             // Desemprego
+    getSeriesHistory('13522', 72),             // IPCA 12m (monthly series)
+    getSeriesMonthly('1178',  FROM_2001),      // Selic: daily→monthly, one per month, no dupes
+    getSeriesMonthly('11752', FROM_2001),      // EMBI+: daily→monthly, long history for correlations
+    getSeriesMonthly('10813', FROM_2001),      // USD/BRL: daily→monthly, long history for correlations
+    getSeriesMonthly('20786', FROM_2001),      // Spread PF: daily→monthly for FCI
+    getSeriesHistory('4513',  72),             // DLSP % PIB (monthly)
+    getSeriesHistory('5788',  72),             // Primário % PIB (monthly)
+    getSeriesHistory('22065', 72),             // IBC-Br 12m (monthly)
+    getSeriesHistory('24369', 72),             // Desemprego (monthly)
     getSeriesHistory('433',   36),             // IPCA mensal (Focus surprise)
   ])
 
@@ -116,17 +117,19 @@ export default async function QuantPage() {
 
   // ── 2. REGRA DE TAYLOR ───────────────────────────────────────────────
   // i* = r* + π + 1.5*(π − π*) + 0.5*gap
-  const R_STAR     = 4.5   // neutral real rate (BCB estimate ~4-5%)
+  const R_STAR     = 4.5   // BCB neutral real rate estimate
   const PI_TARGET  = 3.0   // BCB meta 2025
   const ALPHA      = 1.5
   const BETA       = 0.5
 
-  const selicPts  = sort(selicH?.data ?? [])
-  const ipca12Pts = sort(ipca12H?.data ?? [])
-  const gapMap    = new Map(hiatoData.map(p => [p.date, p.gap]))
-  const ipca12Map = makeMap(ipca12Pts)
+  // selicPts from getSeriesMonthly: one observation per month, no duplicates
+  const sortedSelicPts = sort(selicPts)
+  const ipca12Pts      = sort(ipca12H?.data ?? [])
+  const gapMap         = new Map(hiatoData.map(p => [p.date, p.gap]))
+  const ipca12Map      = makeMap(ipca12Pts)
+  const selicMap       = makeMap(sortedSelicPts)
 
-  const taylorData = selicPts.map(pt => {
+  const taylorData = sortedSelicPts.map(pt => {
     const d    = pt.date.slice(0, 7)
     const ipca = ipca12Map.get(d)
     if (ipca == null) return null
@@ -142,13 +145,12 @@ export default async function QuantPage() {
   }).filter((p): p is NonNullable<typeof p> => p !== null).slice(-60)
 
   // ── 3. SURPRESA FOCUS ───────────────────────────────────────────────
-  const ipcaMPts   = sort(ipcaMH?.data ?? [])
+  const ipcaMPts     = sort(ipcaMH?.data ?? [])
   const surpriseData = await fetchFocusSurprise(ipcaMPts)
 
   // ── 4. DECOMPOSIÇÃO DA DÍVIDA ───────────────────────────────────────
   const dlspPts  = sort(dlspH?.data ?? [])
   const primPts  = sort(primH?.data ?? [])
-  const selicMap = makeMap(selicPts)
   const primMap  = makeMap(primPts)
   const ibcMap   = makeMap(sort(ibcBr12H?.data ?? []))
 
@@ -162,7 +164,7 @@ export default async function QuantPage() {
     const s       = primMap.get(d)
     if (r == null || gReal == null || pi == null || s == null) return null
 
-    const gNom           = gReal + pi
+    const gNom            = gReal + pi
     const interestContrib = parseFloat(((r / 100 / 12) * dPrev).toFixed(3))
     const growthContrib   = parseFloat((-(gNom / 100 / 12) * dPrev).toFixed(3))
     const primaryContrib  = parseFloat((-s / 12).toFixed(3))
@@ -172,14 +174,18 @@ export default async function QuantPage() {
   }).filter((p): p is NonNullable<typeof p> => p !== null).slice(-48)
 
   // ── 5. CORRELAÇÕES ROLANTES (24m window) ────────────────────────────
+  const embiMap   = makeMap(sort(embiPts))
+  const usdMap    = makeMap(sort(usdPts))
+  const desempMap = makeMap(sort(desempH?.data ?? []))
+
   const CORR_WIN = 24
   const corrBase  = ipca12Pts.map(p => p.date.slice(0, 7))
   const cIPCA     = ipca12Pts.map(p => p.value)
   const cSelic    = corrBase.map(d => selicMap.get(d) ?? null)
-  const cEMBI     = corrBase.map(d => (embiH?.data ?? []).find(p => p.date.slice(0, 7) === d)?.value ?? null)
-  const cUSD      = corrBase.map(d => (usdH?.data ?? []).find(p => p.date.slice(0, 7) === d)?.value ?? null)
-  const cIBC      = corrBase.map(d => ibcMap.get(d) ?? null)
-  const cUnemp    = corrBase.map(d => (desempH?.data ?? []).find(p => p.date.slice(0, 7) === d)?.value ?? null)
+  const cEMBI     = corrBase.map(d => embiMap.get(d)  ?? null)
+  const cUSD      = corrBase.map(d => usdMap.get(d)   ?? null)
+  const cIBC      = corrBase.map(d => ibcMap.get(d)   ?? null)
+  const cUnemp    = corrBase.map(d => desempMap.get(d) ?? null)
 
   const corrSelicIPCA = rollingCorrPair(corrBase, cSelic, cIPCA,  CORR_WIN)
   const corrEMBIUSD   = rollingCorrPair(corrBase, cEMBI,  cUSD,   CORR_WIN)
@@ -194,9 +200,10 @@ export default async function QuantPage() {
 
   // ── 6. FCI ──────────────────────────────────────────────────────────
   // Weights: Selic 30%, Spread PF 25%, USD/BRL 25%, EMBI 20%
+  const spreadMap = makeMap(sort(spreadPfPts))
   const fciDates  = corrBase
-  const fciSelic  = fciDates.map(d => selicMap.get(d) ?? null)
-  const fciSpread = fciDates.map(d => (spreadPfH?.data ?? []).find(p => p.date.slice(0, 7) === d)?.value ?? null)
+  const fciSelic  = fciDates.map(d => selicMap.get(d)  ?? null)
+  const fciSpread = fciDates.map(d => spreadMap.get(d) ?? null)
   const fciUSD    = cUSD
   const fciEMBI   = cEMBI
 
