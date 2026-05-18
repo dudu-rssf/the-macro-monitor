@@ -7,7 +7,7 @@ export interface NewsItem {
   source:      string
 }
 
-const FEEDS: { url: string; source: string }[] = [
+const FEEDS_ECONOMIA: { url: string; source: string }[] = [
   { url: 'https://www.valor.com.br/rss',                                 source: 'Valor Econômico'  },
   { url: 'https://braziljournal.com/feed/',                              source: 'Brazil Journal'   },
   { url: 'https://neofeed.com.br/feed/',                                 source: 'NeoFeed'          },
@@ -15,6 +15,15 @@ const FEEDS: { url: string; source: string }[] = [
   { url: 'https://www.infomoney.com.br/mercados/feed/',                  source: 'InfoMoney'        },
   { url: 'https://www.infomoney.com.br/economia/feed/',                  source: 'InfoMoney'        },
   { url: 'https://www.cnnbrasil.com.br/feed/',                           source: 'CNN Brasil'       },
+]
+
+const FEEDS_GEOPOLITICA: { url: string; source: string }[] = [
+  { url: 'https://feeds.bbci.co.uk/news/world/rss.xml',      source: 'BBC World'          },
+  { url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml', source: 'NYT World'    },
+  { url: 'https://www.aljazeera.com/xml/rss/all.xml',         source: 'Al Jazeera'        },
+  { url: 'https://www.theguardian.com/world/rss',             source: 'The Guardian'      },
+  { url: 'https://foreignpolicy.com/feed/',                   source: 'Foreign Policy'    },
+  { url: 'https://rss.dw.com/rdf/rss-bra-pol',               source: 'DW Brasil'         },
 ]
 
 const SKIP_KW = [
@@ -77,9 +86,9 @@ function parseItems(xml: string, source: string): NewsItem[] {
   return items
 }
 
-export async function fetchAllNews(): Promise<NewsItem[]> {
+async function fetchFromFeeds(feeds: { url: string; source: string }[]): Promise<NewsItem[]> {
   const settled = await Promise.allSettled(
-    FEEDS.map(async ({ url, source }) => {
+    feeds.map(async ({ url, source }) => {
       const res = await fetch(url, {
         next: { revalidate: 900 },
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MacroMonitor/1.0)' },
@@ -97,3 +106,6 @@ export async function fetchAllNews(): Promise<NewsItem[]> {
   const seen = new Set<string>()
   return all.filter(n => { if (seen.has(n.url)) return false; seen.add(n.url); return true })
 }
+
+export function fetchAllNews():        Promise<NewsItem[]> { return fetchFromFeeds(FEEDS_ECONOMIA)    }
+export function fetchGeopoliticsNews(): Promise<NewsItem[]> { return fetchFromFeeds(FEEDS_GEOPOLITICA) }
