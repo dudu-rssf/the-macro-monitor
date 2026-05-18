@@ -107,5 +107,20 @@ async function fetchFromFeeds(feeds: { url: string; source: string }[]): Promise
   return all.filter(n => { if (seen.has(n.url)) return false; seen.add(n.url); return true })
 }
 
+const FEEDS_NEGOCIOS: { url: string; source: string }[] = [
+  // Brasil — seções específicas de empresas/negócios
+  { url: 'https://www.infomoney.com.br/negocios/feed/',   source: 'InfoMoney Negócios' },
+  { url: 'https://www.infomoney.com.br/empresas/feed/',   source: 'InfoMoney Empresas' },
+  { url: 'https://neofeed.com.br/feed/',                  source: 'NeoFeed'            },
+  { url: 'https://braziljournal.com/feed/',               source: 'Brazil Journal'     },
+  { url: 'https://capitalaberto.com.br/feed/',            source: 'Capital Aberto'     },
+  // Internacional — business
+  { url: 'https://feeds.bbci.co.uk/news/business/rss.xml',                                                              source: 'BBC Business'  },
+  { url: 'https://www.ft.com/companies?format=rss',                                                                     source: 'FT Companies'  },
+  { url: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml',                                                               source: 'WSJ Markets'   },
+  { url: 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664', source: 'CNBC Markets'  },
+]
+
 export function fetchAllNews():        Promise<NewsItem[]> { return fetchFromFeeds(FEEDS_ECONOMIA)    }
 export function fetchGeopoliticsNews(): Promise<NewsItem[]> { return fetchFromFeeds(FEEDS_GEOPOLITICA) }
+export function fetchNegociosNews():    Promise<NewsItem[]> { return fetchFromFeeds(FEEDS_NEGOCIOS)    }

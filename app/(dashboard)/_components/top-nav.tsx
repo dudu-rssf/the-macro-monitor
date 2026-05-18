@@ -17,6 +17,7 @@ const navLinks = [
   { href: '/mercados',           label: 'Mercados',       },
   { href: '/quant',              label: 'Quant',          },
   { href: '/geopolitica',        label: 'Geopolítica',    },
+  { href: '/negocios',           label: 'Negócios',       },
   { href: '/painel',             label: 'Painel',         },
 ]
 
